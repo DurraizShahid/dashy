@@ -17,6 +17,9 @@ import {
   Brain,
   ChevronLeft,
   ChevronRight,
+  HeartPulse,
+  Wifi,
+  BookOpen,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -83,6 +86,8 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
           "border-t border-white/10",
           expanded ? "mx-0 mt-2 mb-1" : "mx-2 mt-2 mb-1"
         )} />
+
+        {/* Hive Mind main entry */}
         <Link
           href="/hive-mind"
           className={cn(
@@ -95,6 +100,50 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
           <Brain className="h-5 w-5 shrink-0" />
           {expanded && (
             <span className="text-sm font-medium truncate">Hive Mind</span>
+          )}
+        </Link>
+
+        {/* Hive Mind sub-items */}
+        <Link
+          href="/hive-mind/health"
+          className={cn(
+            "flex items-center gap-3 rounded-xl text-white/80 transition-colors shrink-0",
+            expanded ? "px-3 py-2 pl-8" : "h-10 w-10 justify-center mx-auto",
+            "hover:bg-white/10 hover:text-white"
+          )}
+          title="Health"
+        >
+          <HeartPulse className="h-4 w-4 shrink-0" />
+          {expanded && (
+            <span className="text-xs font-medium truncate">Health</span>
+          )}
+        </Link>
+        <Link
+          href="/hive-mind/services"
+          className={cn(
+            "flex items-center gap-3 rounded-xl text-white/80 transition-colors shrink-0",
+            expanded ? "px-3 py-2 pl-8" : "h-10 w-10 justify-center mx-auto",
+            "hover:bg-white/10 hover:text-white"
+          )}
+          title="Services"
+        >
+          <Wifi className="h-4 w-4 shrink-0" />
+          {expanded && (
+            <span className="text-xs font-medium truncate">Services</span>
+          )}
+        </Link>
+        <Link
+          href="/hive-mind/knowledge"
+          className={cn(
+            "flex items-center gap-3 rounded-xl text-white/80 transition-colors shrink-0",
+            expanded ? "px-3 py-2 pl-8" : "h-10 w-10 justify-center mx-auto",
+            "hover:bg-white/10 hover:text-white"
+          )}
+          title="Knowledge"
+        >
+          <BookOpen className="h-4 w-4 shrink-0" />
+          {expanded && (
+            <span className="text-xs font-medium truncate">Knowledge</span>
           )}
         </Link>
       </nav>
