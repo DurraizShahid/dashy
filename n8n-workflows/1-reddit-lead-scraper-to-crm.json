@@ -1,0 +1,51 @@
+{
+  "name": "HelpTribe Reddit Lead Scraper to CRM",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-manual",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 1 }]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "Run Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const CONFIG = {\n  userAgent: 'HelpTribeBot/1.0 (lead-radar; +https://helptribe.com)',\n  redditSearchTimeRange: 'month',\n  redditLimitPerSearch: 25,\n  minimumScoreToPost: 40,\n  hotLeadScore: 80,\n  crmEndpoint: 'https://dashy-production-8f23.up.railway.app/api/leads/ingest',\n  excludedMarketWords: ['pakistan', 'karachi', 'lahore', 'islamabad', 'rawalpindi', 'faisalabad', 'multan', 'pkr', 'rs.']\n};\n\nconst SEARCHES = [\n  { productHint: 'Dilivygo', query: 'subreddit:restaurants restaurant POS system recommendation' },\n  { productHint: 'Dilivygo', query: 'subreddit:ToastPOS Toast alternative restaurant fees' },\n  { productHint: 'Dilivygo', query: 'cloud kitchen ghost kitchen software delivery orders' },\n  { productHint: 'Marlin', query: 'subreddit:propertymanagement Yardi AppFolio alternative' },\n  { productHint: 'Marlin', query: 'property management software landlord tenants maintenance' },\n  { productHint: 'Terro', query: 'subreddit:Accounting QuickBooks Xero reconciliation software' },\n  { productHint: 'Terro', query: 'ZATCA Phase 2 accounting software Fatoora Saudi' },\n  { productHint: 'Terro', query: 'UAE corporate tax VAT accounting software' },\n  { productHint: 'Haigo', query: 'subreddit:hotels hotel PMS Cloudbeds Mews alternative' },\n  { productHint: 'Haigo', query: 'hotel channel manager booking engine expensive' }\n];\n\nconst PRODUCT_KEYWORDS = {\n  Dilivygo: ['restaurant', 'qsr', 'fast food', 'cloud kitchen', 'ghost kitchen', 'pos', 'toast', 'square', 'lightspeed', 'doordash', 'uber eats', 'grubhub', 'deliveroo', 'talabat', 'inventory', 'food cost', 'kitchen display'],\n  Marlin: ['property management', 'property manager', 'real estate', 'landlord', 'tenant', 'rent collection', 'lease', 'yardi', 'appfolio', 'buildium', 'doorloop', 'maintenance request'],\n  Terro: ['accounting', 'bookkeeping', 'cfo', 'finance', 'tax', 'vat', 'corporate tax', 'zatca', 'fatoora', 'quickbooks', 'xero', 'reconciliation', 'month end', 'e-invoicing'],\n  Haigo: ['hotel', 'hotels', 'hospitality', 'pms', 'front desk', 'housekeeping', 'booking engine', 'channel manager', 'cloudbeds', 'mews', 'oracle opera', 'revenue management', 'overbooking']\n};\n\nconst PAIN_KEYWORDS = ['alternative', 'recommendation', 'looking for', 'switching', 'expensive', 'fees', 'bad support', 'broken', 'frustrated', 'manual', 'spreadsheet', 'does not integrate', 'outdated', 'slow', 'hard to use', 'nightmare'];\n\nconst MARKET_KEYWORDS = {\n  USA: [' usa ', ' u.s.', ' united states', ' america', 'doordash', 'grubhub', 'toast pos', 'appfolio', 'yardi'],\n  UK: [' uk ', ' united kingdom', ' london', ' deliveroo', 'just eat', '£'],\n  Australia: [' australia', ' sydney', ' melbourne', ' menulog', ' aud '],\n  UAE: [' uae', ' dubai', ' abu dhabi', ' talabat', ' careem', ' ejari', ' rera', ' aed'],\n  'Saudi Arabia': [' saudi', ' ksa', ' riyadh', ' jeddah', ' hungerstation', ' zatca', ' fatoora', ' sar '],\n  Qatar: [' qatar', ' doha', ' qar '],\n  Kuwait: [' kuwait', ' kwd '],\n  Bahrain: [' bahrain', ' bhd '],\n  Oman: [' oman', ' muscat', ' omr ']\n};\n\nfunction cleanText(v) { return String(v || '').replace(/\\s+/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim(); }\nfunction includesAny(text, words) { const lower = ' ' + text.toLowerCase() + ' '; return words.filter(w => lower.includes(String(w).toLowerCase())); }\nfunction detectMarket(text) { const lower = ' ' + text.toLowerCase() + ' '; for (const [m, words] of Object.entries(MARKET_KEYWORDS)) { if (words.some(w => lower.includes(w.toLowerCase()))) return m; } return 'Unknown / likely international'; }\nfunction detectProduct(text, hint) { const scores = {}; for (const [p, words] of Object.entries(PRODUCT_KEYWORDS)) { scores[p] = includesAny(text, words).length; } let best = hint || 'Review'; let bestScore = scores[best] || 0; for (const [p, s] of Object.entries(scores)) { if (s > bestScore) { best = p; bestScore = s; } } return bestScore === 0 && hint ? hint : bestScore === 0 ? 'Review' : best; }\nfunction summarizeMatches(text, product) { return { productMatches: [...new Set(includesAny(text, PRODUCT_KEYWORDS[product] || []))].slice(0, 8), painMatches: [...new Set(includesAny(text, PAIN_KEYWORDS))].slice(0, 8) }; }\nfunction scoreLead({ text, product, market, upvotes, comments }) { const { productMatches, painMatches } = summarizeMatches(text, product); let score = 0; if (product !== 'Review') score += 20; score += Math.min(30, productMatches.length * 5); score += Math.min(30, painMatches.length * 7); if (market !== 'Unknown / likely international') score += 10; const eng = Number(upvotes || 0) + Number(comments || 0); if (eng >= 10) score += 5; if (eng >= 50) score += 5; if (text.length > 250) score += 5; return Math.min(score, 100); }\nfunction shouldExclude(text) { return CONFIG.excludedMarketWords.some(w => text.toLowerCase().includes(w)); }\nfunction buildRedditUrl(query) { return 'https://www.reddit.com/search.json?q=' + encodeURIComponent(query) + '&sort=new&t=' + CONFIG.redditSearchTimeRange + '&limit=' + CONFIG.redditLimitPerSearch; }\nfunction sleep(ms) { return new Promise(r => setTimeout(r, ms)); }\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.seenRedditPosts = staticData.seenRedditPosts || {};\nconst now = Date.now();\nfor (const [id, ts] of Object.entries(staticData.seenRedditPosts)) { if (now - Number(ts) > 30 * 24 * 60 * 60 * 1000) delete staticData.seenRedditPosts[id]; }\n\nconst results = [];\nlet duplicateCount = 0, excludedCount = 0, belowScoreCount = 0, sentCount = 0;\n\nfor (const search of SEARCHES) {\n  try {\n    const resp = await fetch(buildRedditUrl(search.query), { method: 'GET', headers: { 'User-Agent': CONFIG.userAgent, 'Accept': 'application/json' } });\n    if (!resp.ok) continue;\n    const data = await resp.json();\n    const children = data?.data?.children || [];\n    for (const child of children) {\n      const p = child?.data || {};\n      const redditId = 'reddit_' + p.id;\n      if (!p.id || p.over_18 || p.is_video || p.stickied) continue;\n      if (staticData.seenRedditPosts[redditId]) { duplicateCount++; continue; }\n      const title = cleanText(p.title);\n      const selftext = cleanText(p.selftext);\n      const combined = title + ' ' + selftext + ' ' + (p.subreddit || '');\n      if (shouldExclude(combined)) { excludedCount++; staticData.seenRedditPosts[redditId] = now; continue; }\n      const product = detectProduct(combined, search.productHint);\n      const market = detectMarket(combined);\n      const score = scoreLead({ text: combined, product, market, upvotes: p.ups, comments: p.num_comments });\n      const matches = summarizeMatches(combined, product);\n      const permalink = p.permalink ? 'https://www.reddit.com' + p.permalink : (p.url || '');\n      if (score < CONFIG.minimumScoreToPost) { belowScoreCount++; staticData.seenRedditPosts[redditId] = now; continue; }\n      const lead = { source: 'Reddit', title, selftext, url: permalink, author: p.author || '', product, market, score, sourceId: redditId, subreddit: p.subreddit || '', upvotes: p.ups || 0, comments: p.num_comments || 0, productMatches: matches.productMatches, painMatches: matches.painMatches };\n      try {\n        const crmResp = await fetch(CONFIG.crmEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lead) });\n        const crmData = await crmResp.json();\n        results.push({ ...lead, crmStatus: crmData.status, crmDuplicate: crmData.isDuplicate });\n        sentCount++;\n      } catch (e) { results.push({ ...lead, crmError: e.message }); }\n      staticData.seenRedditPosts[redditId] = now;\n      await sleep(300);\n    }\n  } catch (e) { /* skip failed search */ }\n  await sleep(500);\n}\n\nreturn [{ json: { ok: true, sentCount, duplicateCount, excludedCount, belowScoreCount, results: results.slice(0, 50), totalResults: results.length } }];"
+      },
+      "id": "code-reddit-scraper",
+      "name": "Reddit Scraper + Score + Send to CRM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst summary = 'Reddit Lead Radar run complete.\\n\\nSent to CRM: ' + input.sentCount + '\\nDuplicates skipped: ' + input.duplicateCount + '\\nExcluded markets: ' + input.excludedCount + '\\nBelow score threshold: ' + input.belowScoreCount + '\\nTotal results: ' + input.totalResults;\nreturn [{ json: { ok: true, summary, ...input } }];"
+      },
+      "id": "code-summary",
+      "name": "Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 100]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Reddit Scraper + Score + Send to CRM", "type": "main", "index": 0 }]] },
+    "Run Every Hour": { "main": [[{ "node": "Reddit Scraper + Score + Send to CRM", "type": "main", "index": 0 }]] },
+    "Reddit Scraper + Score + Send to CRM": { "main": [[{ "node": "Summary", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

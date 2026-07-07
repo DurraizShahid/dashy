@@ -13,6 +13,7 @@ import {
   Bell,
   BarChart3,
   Settings,
+  FileText,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
@@ -28,6 +29,7 @@ const navItems = [
   { label: "Scraper Runs", icon: Activity, href: "/scraper-runs" },
   { label: "Notifications", icon: Bell, href: "/notifications" },
   { label: "Reports", icon: BarChart3, href: "/reports" },
+  { label: "Invoices", icon: FileText, href: "/invoices" },
 ]
 
 interface CRMSidebarProps {

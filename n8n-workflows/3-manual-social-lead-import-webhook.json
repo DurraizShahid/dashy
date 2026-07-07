@@ -1,0 +1,48 @@
+{
+  "name": "HelpTribe Manual Social Lead Import Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "import-social-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-receiver",
+      "name": "Webhook - Import Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 100],
+      "webhookId": "import-social-lead"
+    },
+    {
+      "parameters": {
+        "jsCode": "const CONFIG = {\n  crmEndpoint: 'https://dashy-production-8f23.up.railway.app/api/leads/ingest',\n  excludedMarketWords: ['pakistan', 'karachi', 'lahore', 'islamabad', 'rawalpindi', 'faisalabad', 'multan', 'pkr', 'rs.']\n};\n\nconst PRODUCT_KEYWORDS = {\n  Dilivygo: ['restaurant', 'qsr', 'fast food', 'cloud kitchen', 'ghost kitchen', 'pos', 'toast', 'square', 'lightspeed', 'doordash', 'uber eats', 'grubhub', 'deliveroo', 'talabat', 'inventory', 'food cost', 'kitchen display'],\n  Marlin: ['property management', 'property manager', 'real estate', 'landlord', 'tenant', 'rent collection', 'lease', 'yardi', 'appfolio', 'buildium', 'doorloop', 'maintenance request'],\n  Terro: ['accounting', 'bookkeeping', 'cfo', 'finance', 'tax', 'vat', 'corporate tax', 'zatca', 'fatoora', 'quickbooks', 'xero', 'reconciliation', 'month end', 'e-invoicing'],\n  Haigo: ['hotel', 'hotels', 'hospitality', 'pms', 'front desk', 'housekeeping', 'booking engine', 'channel manager', 'cloudbeds', 'mews', 'oracle opera', 'revenue management', 'overbooking']\n};\n\nconst PAIN_KEYWORDS = ['alternative', 'recommendation', 'looking for', 'switching', 'expensive', 'fees', 'bad support', 'broken', 'frustrated', 'manual', 'spreadsheet', 'does not integrate', 'outdated', 'slow', 'hard to use', 'nightmare'];\n\nconst MARKET_KEYWORDS = {\n  USA: [' usa ', ' u.s.', ' united states', ' america', 'doordash', 'grubhub', 'toast pos', 'appfolio', 'yardi'],\n  UK: [' uk ', ' united kingdom', ' london', ' deliveroo', 'just eat', '£'],\n  Australia: [' australia', ' sydney', ' melbourne', ' menulog', ' aud '],\n  UAE: [' uae', ' dubai', ' abu dhabi', ' talabat', ' careem', ' ejari', ' rera', ' aed'],\n  'Saudi Arabia': [' saudi', ' ksa', ' riyadh', ' jeddah', ' hungerstation', ' zatca', ' fatoora', ' sar '],\n  Qatar: [' qatar', ' doha', ' qar '],\n  Kuwait: [' kuwait', ' kwd '],\n  Bahrain: [' bahrain', ' bhd '],\n  Oman: [' oman', ' muscat', ' omr ']\n};\n\nfunction includesAny(text, words) { const lower = ' ' + text.toLowerCase() + ' '; return words.filter(w => lower.includes(String(w).toLowerCase())); }\nfunction detectMarket(text) { const lower = ' ' + text.toLowerCase() + ' '; for (const [m, words] of Object.entries(MARKET_KEYWORDS)) { if (words.some(w => lower.includes(w.toLowerCase()))) return m; } return 'Unknown / likely international'; }\nfunction detectProduct(text, hint) { const scores = {}; for (const [p, words] of Object.entries(PRODUCT_KEYWORDS)) { scores[p] = includesAny(text, words).length; } let best = hint || 'Review'; let bestScore = scores[best] || 0; for (const [p, s] of Object.entries(scores)) { if (s > bestScore) { best = p; bestScore = s; } } return bestScore === 0 && hint ? hint : bestScore === 0 ? 'Review' : best; }\nfunction summarizeMatches(text, product) { return { productMatches: [...new Set(includesAny(text, PRODUCT_KEYWORDS[product] || []))].slice(0, 8), painMatches: [...new Set(includesAny(text, PAIN_KEYWORDS))].slice(0, 8) }; }\nfunction scoreLead({ text, product, market }) { const { productMatches, painMatches } = summarizeMatches(text, product); let score = 0; if (product !== 'Review') score += 20; score += Math.min(30, productMatches.length * 5); score += Math.min(30, painMatches.length * 7); if (market !== 'Unknown / likely international') score += 10; if (text.length > 250) score += 5; return Math.min(score, 100); }\nfunction shouldExclude(text) { return CONFIG.excludedMarketWords.some(w => text.toLowerCase().includes(w)); }\n\nconst input = $input.first().json;\nconst body = input.body || input;\n\nconst source = body.source || 'Manual Import';\nconst title = body.title || body.name || '';\nconst selftext = body.description || body.text || body.selftext || body.content || '';\nconst url = body.url || body.link || '';\nconst author = body.author || body.contactName || body.name || '';\nconst productHint = body.product || body.productHint || null;\nconst marketHint = body.market || null;\nconst contactEmail = body.email || body.contactEmail || null;\nconst contactPhone = body.phone || body.contactPhone || null;\nconst company = body.company || body.companyName || null;\n\nif (!title && !selftext) {\n  return [{ json: { ok: false, error: 'Missing title and description. Provide at least one.' } }];\n}\n\nconst combinedText = (title + ' ' + selftext + ' ' + company).trim();\n\nif (shouldExclude(combinedText)) {\n  return [{ json: { ok: false, error: 'Lead excluded: matches excluded market (Pakistan).', excluded: true } }];\n}\n\nconst product = detectProduct(combinedText, productHint);\nconst market = marketHint || detectMarket(combinedText);\nconst { productMatches, painMatches } = summarizeMatches(combinedText, product);\nconst score = scoreLead({ text: combinedText, product, market });\n\nconst lead = {\n  source,\n  title,\n  selftext,\n  url,\n  author,\n  product,\n  market,\n  score,\n  sourceId: 'manual_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),\n  productMatches,\n  painMatches,\n  contactEmail,\n  contactPhone,\n  company\n};\n\ntry {\n  const crmResp = await fetch(CONFIG.crmEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lead) });\n  const crmData = await crmResp.json();\n  return [{ json: { ok: true, lead, crm: crmData } }];\n} catch (e) {\n  return [{ json: { ok: false, error: e.message, lead } }];\n}"
+      },
+      "id": "code-validate-score",
+      "name": "Validate + Score + Send to CRM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.ok ? 200 : 400 }}"
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [700, 100]
+    }
+  ],
+  "connections": {
+    "Webhook - Import Lead": { "main": [[{ "node": "Validate + Score + Send to CRM", "type": "main", "index": 0 }]] },
+    "Validate + Score + Send to CRM": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
