@@ -19,6 +19,7 @@ import {
 } from "react";
 import { createClient, type HiveMindClient } from "./client";
 import { HiveMindConfigError } from "./errors";
+import { getHiveMindApiKey } from "@/lib/env";
 import type { HiveMindClientConfig } from "./types";
 
 interface HiveMindContextValue {
@@ -31,7 +32,12 @@ function createInitialState(
   config?: Partial<HiveMindClientConfig>
 ): HiveMindContextValue {
   try {
-    const client = createClient(config);
+    const apiKey = getHiveMindApiKey();
+    const mergedConfig: Partial<HiveMindClientConfig> = {
+      ...config,
+      token: config?.token ?? apiKey,
+    };
+    const client = createClient(mergedConfig);
     return { client, error: null, isReady: true };
   } catch (err) {
     const message =

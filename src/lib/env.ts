@@ -65,3 +65,11 @@ export function getPublicEnv(key: (typeof requiredPublicVars)[number]): string {
 export function isHiveMindEnabled(): boolean {
   return !!process.env.NEXT_PUBLIC_HIVE_MIND_API_URL;
 }
+
+/**
+ * Returns the Hive Mind API key, if configured.
+ * Used to authenticate API client for protected endpoints.
+ */
+export function getHiveMindApiKey(): string | undefined {
+  return process.env.NEXT_PUBLIC_HIVE_MIND_API_KEY || undefined;
+}
