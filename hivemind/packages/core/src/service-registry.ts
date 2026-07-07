@@ -1,222 +1,238 @@
+export type HealthCheckType = 'tcp' | 'http' | 'postgres' | 'redis' | 'qdrant' | 'minio' | 'neo4j' | 'unknown';
+export type ServiceCategory = 'database' | 'queue' | 'storage' | 'vector' | 'graph' | 'auth' | 'document' | 'search' | 'web' | 'ai' | 'monitoring' | 'proxy';
+
 export interface ServiceEntry {
   key: string;
-  name: string;
+  displayName: string;
+  category: ServiceCategory;
   purpose: string;
-  internalHost: string;
-  internalPort: number;
-  publicUrlEnvVar?: string;
-  required: boolean;
-  healthCheckStrategy: 'tcp' | 'http' | 'redis-ping' | 'postgres-ping' | 'qdrant-collections' | 'minio-buckets' | 'neo4j-ping';
-  futureConnectorPackage: string;
+  requiredForPhase2: boolean;
+  envVar: string;
+  defaultInternalUrl: string;
+  publicExposureRecommended: boolean;
+  healthCheckType: HealthCheckType;
+  notes: string;
 }
 
-export const serviceRegistry: Record<string, ServiceEntry> = {
-  postgres_metadata: {
+export const serviceRegistry: ServiceEntry[] = [
+  {
     key: 'postgres_metadata',
-    name: 'Postgres (Metadata)',
+    displayName: 'Postgres (Metadata)',
+    category: 'database',
     purpose: 'Primary metadata database for Hive Mind Core',
-    internalHost: 'postgres.railway.internal',
-    internalPort: 5432,
-    publicUrlEnvVar: undefined,
-    required: true,
-    healthCheckStrategy: 'postgres-ping',
-    futureConnectorPackage: '@hivemind/db',
+    requiredForPhase2: true,
+    envVar: 'DATABASE_URL',
+    defaultInternalUrl: 'postgresql://postgres:password@postgres.railway.internal:5432/railway',
+    publicExposureRecommended: false,
+    healthCheckType: 'postgres',
+    notes: 'Shared with Keycloak until separate Hive Mind DB is provisioned',
   },
-  redis_queue: {
+  {
     key: 'redis_queue',
-    name: 'Redis (Queue/Cache)',
-    purpose: 'Task queue, caching, and pub/sub',
-    internalHost: 'redis-9dw0.railway.internal',
-    internalPort: 6379,
-    publicUrlEnvVar: undefined,
-    required: true,
-    healthCheckStrategy: 'redis-ping',
-    futureConnectorPackage: '@hivemind/core',
+    displayName: 'Redis (Queue/Cache)',
+    category: 'queue',
+    purpose: 'BullMQ job queue, caching, pub/sub',
+    requiredForPhase2: true,
+    envVar: 'REDIS_URL',
+    defaultInternalUrl: 'redis://default:password@redis-9dw0.railway.internal:6379/2',
+    publicExposureRecommended: false,
+    healthCheckType: 'redis',
+    notes: 'Uses DB index 2. Separate from RAGFlow (0) and Paperless (1)',
   },
-  minio_storage: {
+  {
     key: 'minio_storage',
-    name: 'MinIO (Object Storage)',
+    displayName: 'MinIO (Object Storage)',
+    category: 'storage',
     purpose: 'S3-compatible object storage for documents, images, artifacts',
-    internalHost: 'minio.railway.internal',
-    internalPort: 9000,
-    publicUrlEnvVar: undefined,
-    required: true,
-    healthCheckStrategy: 'minio-buckets',
-    futureConnectorPackage: '@hivemind/connectors',
+    requiredForPhase2: true,
+    envVar: 'MINIO_ENDPOINT',
+    defaultInternalUrl: 'http://minio.railway.internal:9000',
+    publicExposureRecommended: false,
+    healthCheckType: 'minio',
+    notes: 'Shared with RAGFlow. Bucket is duplicate MinIO, to be consolidated later',
   },
-  qdrant: {
+  {
     key: 'qdrant',
-    name: 'Qdrant',
-    purpose: 'Vector database for embeddings',
-    internalHost: 'qdrant.railway.internal',
-    internalPort: 6333,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_QDRANT_URL',
-    required: true,
-    healthCheckStrategy: 'qdrant-collections',
-    futureConnectorPackage: '@hivemind/connectors',
+    displayName: 'Qdrant',
+    category: 'vector',
+    purpose: 'Vector database for embedding storage and similarity search',
+    requiredForPhase2: true,
+    envVar: 'QDRANT_URL',
+    defaultInternalUrl: 'http://qdrant.railway.internal:6333',
+    publicExposureRecommended: false,
+    healthCheckType: 'qdrant',
+    notes: '',
   },
-  neo4j: {
+  {
     key: 'neo4j',
-    name: 'Neo4j',
-    purpose: 'Graph database for knowledge graph',
-    internalHost: 'neo4j.railway.internal',
-    internalPort: 7687,
-    publicUrlEnvVar: undefined,
-    required: true,
-    healthCheckStrategy: 'neo4j-ping',
-    futureConnectorPackage: '@hivemind/connectors',
+    displayName: 'Neo4j',
+    category: 'graph',
+    purpose: 'Graph database for knowledge graph entity and relationship storage',
+    requiredForPhase2: true,
+    envVar: 'NEO4J_URI',
+    defaultInternalUrl: 'bolt://neo4j.railway.internal:7687',
+    publicExposureRecommended: false,
+    healthCheckType: 'neo4j',
+    notes: 'Graphiti also connects internally. TCP proxy exists for external access',
   },
-  graphiti: {
-    key: 'graphiti',
-    name: 'Graphiti',
-    purpose: 'Knowledge graph builder (entity extraction & relationships)',
-    internalHost: 'graphiti.railway.internal',
-    internalPort: 8000,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_GRAPHITI_URL',
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  paperless: {
-    key: 'paperless',
-    name: 'Paperless-ngx',
-    purpose: 'Document management & OCR',
-    internalHost: 'paperless-ngx.railway.internal',
-    internalPort: 8000,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_PAPERLESS_NGX_URL',
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  ragflow: {
-    key: 'ragflow',
-    name: 'RAGFlow',
-    purpose: 'Document ingestion, deep document understanding, RAG pipeline',
-    internalHost: 'ragflow.railway.internal',
-    internalPort: 80,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_RAGFLOW_URL',
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  ragflow_mysql: {
-    key: 'ragflow_mysql',
-    name: 'RAGFlow MySQL',
-    purpose: 'RAGFlow metadata storage',
-    internalHost: 'mysql.railway.internal',
-    internalPort: 3306,
-    publicUrlEnvVar: undefined,
-    required: false,
-    healthCheckStrategy: 'tcp',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  ragflow_elasticsearch: {
-    key: 'ragflow_elasticsearch',
-    name: 'RAGFlow Elasticsearch',
-    purpose: 'RAGFlow full-text search engine',
-    internalHost: 'elasticsearch.railway.internal',
-    internalPort: 9200,
-    publicUrlEnvVar: undefined,
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  docling: {
-    key: 'docling',
-    name: 'Docling',
-    purpose: 'Document parsing & conversion (PDF, DOCX, etc.)',
-    internalHost: 'docling.railway.internal',
-    internalPort: 5001,
-    publicUrlEnvVar: undefined,
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  crawl4ai: {
-    key: 'crawl4ai',
-    name: 'Crawl4AI',
-    purpose: 'Web crawling & scraping',
-    internalHost: 'crawl4ai.railway.internal',
-    internalPort: 11235,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_CRAWL4AI_URL',
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  archivebox: {
-    key: 'archivebox',
-    name: 'ArchiveBox',
-    purpose: 'Web page archiving',
-    internalHost: 'archivebox.railway.internal',
-    internalPort: 8000,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_ARCHIVEBOX_URL',
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  searxng: {
-    key: 'searxng',
-    name: 'SearXNG',
-    purpose: 'Privacy-respecting meta search engine',
-    internalHost: 'searxng-railway.railway.internal',
-    internalPort: 8080,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_SEARXNG_RAILWAY_URL',
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  perplexica: {
-    key: 'perplexica',
-    name: 'Perplexica',
-    purpose: 'AI-powered search & chat interface',
-    internalHost: 'perplexica.railway.internal',
-    internalPort: 3000,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_PERPLEXICA_URL',
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  world_monitor: {
-    key: 'world_monitor',
-    name: 'World Monitor',
-    purpose: 'Global news monitoring & alerting',
-    internalHost: 'app.railway.internal',
-    internalPort: 80,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_WORLD_MONITOR_URL',
-    required: false,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
-  },
-  keycloak: {
+  {
     key: 'keycloak',
-    name: 'Keycloak',
-    purpose: 'Authentication, SSO, user management',
-    internalHost: 'keycloak.railway.internal',
-    internalPort: 8080,
-    publicUrlEnvVar: 'RAILWAY_SERVICE_KEYCLOAK_URL',
-    required: true,
-    healthCheckStrategy: 'http',
-    futureConnectorPackage: '@hivemind/connectors',
+    displayName: 'Keycloak',
+    category: 'auth',
+    purpose: 'Authentication, SSO, user and realm management',
+    requiredForPhase2: true,
+    envVar: 'KEYCLOAK_URL',
+    defaultInternalUrl: 'http://keycloak.railway.internal:8080',
+    publicExposureRecommended: true,
+    healthCheckType: 'http',
+    notes: 'Realm: hivemind. Provides OIDC tokens for API auth',
   },
-};
+  {
+    key: 'graphiti',
+    displayName: 'Graphiti',
+    category: 'ai',
+    purpose: 'Knowledge graph builder — entity extraction and relationship inference',
+    requiredForPhase2: false,
+    envVar: 'GRAPHITI_URL',
+    defaultInternalUrl: 'http://graphiti.railway.internal:8000',
+    publicExposureRecommended: true,
+    healthCheckType: 'http',
+    notes: 'Requires OpenAI API key for LLM calls',
+  },
+  {
+    key: 'docling',
+    displayName: 'Docling',
+    category: 'document',
+    purpose: 'Document parsing and conversion (PDF, DOCX, HTML, images)',
+    requiredForPhase2: false,
+    envVar: 'DOCLING_URL',
+    defaultInternalUrl: 'http://docling.railway.internal:5001',
+    publicExposureRecommended: false,
+    healthCheckType: 'http',
+    notes: 'IBM Docling Serve CPU',
+  },
+  {
+    key: 'crawl4ai',
+    displayName: 'Crawl4AI',
+    category: 'web',
+    purpose: 'Web crawling and content scraping',
+    requiredForPhase2: false,
+    envVar: 'CRAWL4AI_URL',
+    defaultInternalUrl: 'http://crawl4ai.railway.internal:11235',
+    publicExposureRecommended: false,
+    healthCheckType: 'http',
+    notes: '',
+  },
+  {
+    key: 'archivebox',
+    displayName: 'ArchiveBox',
+    category: 'web',
+    purpose: 'Web page archiving and offline browsing',
+    requiredForPhase2: false,
+    envVar: 'ARCHIVEBOX_URL',
+    defaultInternalUrl: 'http://archivebox.railway.internal:8000',
+    publicExposureRecommended: true,
+    healthCheckType: 'http',
+    notes: 'Stores snapshots of ingested web pages',
+  },
+  {
+    key: 'ragflow',
+    displayName: 'RAGFlow',
+    category: 'ai',
+    purpose: 'Document ingestion, deep document understanding, RAG pipeline',
+    requiredForPhase2: false,
+    envVar: 'RAGFLOW_URL',
+    defaultInternalUrl: 'http://ragflow.railway.internal:80',
+    publicExposureRecommended: true,
+    healthCheckType: 'http',
+    notes: 'Full stack: MySQL + Elasticsearch + MinIO + Redis. Do not touch env vars',
+  },
+  {
+    key: 'ragflow_mysql',
+    displayName: 'RAGFlow MySQL',
+    category: 'database',
+    purpose: 'RAGFlow metadata database',
+    requiredForPhase2: false,
+    envVar: 'none (managed by RAGFlow)',
+    defaultInternalUrl: 'mysql.railway.internal:3306',
+    publicExposureRecommended: false,
+    healthCheckType: 'unknown',
+    notes: 'Managed by RAGFlow. Do not modify',
+  },
+  {
+    key: 'ragflow_elasticsearch',
+    displayName: 'RAGFlow Elasticsearch',
+    category: 'search',
+    purpose: 'RAGFlow full-text search engine',
+    requiredForPhase2: false,
+    envVar: 'none (managed by RAGFlow)',
+    defaultInternalUrl: 'http://elasticsearch.railway.internal:9200',
+    publicExposureRecommended: false,
+    healthCheckType: 'http',
+    notes: 'Managed by RAGFlow. Do not modify',
+  },
+  {
+    key: 'paperless',
+    displayName: 'Paperless-ngx',
+    category: 'document',
+    purpose: 'Document management, OCR, tagging, and search',
+    requiredForPhase2: false,
+    envVar: 'PAPERLESS_URL',
+    defaultInternalUrl: 'http://paperless-ngx.railway.internal:8000',
+    publicExposureRecommended: true,
+    healthCheckType: 'http',
+    notes: 'Uses Postgres-S_0w and Redis-9dW0 DB 1. Do not touch env vars',
+  },
+  {
+    key: 'searxng',
+    displayName: 'SearXNG',
+    category: 'search',
+    purpose: 'Privacy-respecting meta search engine aggregator',
+    requiredForPhase2: false,
+    envVar: 'SEARXNG_URL',
+    defaultInternalUrl: 'http://searxng-railway.railway.internal:8080',
+    publicExposureRecommended: true,
+    healthCheckType: 'http',
+    notes: '',
+  },
+  {
+    key: 'perplexica',
+    displayName: 'Perplexica',
+    category: 'ai',
+    purpose: 'AI-powered search and chat interface',
+    requiredForPhase2: false,
+    envVar: 'PERPLEXICA_URL',
+    defaultInternalUrl: 'http://perplexica.railway.internal:3000',
+    publicExposureRecommended: true,
+    healthCheckType: 'http',
+    notes: '',
+  },
+  {
+    key: 'world_monitor',
+    displayName: 'World Monitor',
+    category: 'monitoring',
+    purpose: 'Global news monitoring and alerting',
+    requiredForPhase2: false,
+    envVar: 'WORLD_MONITOR_URL',
+    defaultInternalUrl: 'http://app.railway.internal:80',
+    publicExposureRecommended: true,
+    healthCheckType: 'http',
+    notes: '',
+  },
+];
 
-export function getService(key: string): ServiceEntry | undefined {
-  return serviceRegistry[key];
+export function getServiceEntry(key: string): ServiceEntry | undefined {
+  return serviceRegistry.find((s) => s.key === key);
 }
 
-export function listRequiredServices(): ServiceEntry[] {
-  return Object.values(serviceRegistry).filter((s) => s.required);
+export function getRequiredServices(): ServiceEntry[] {
+  return serviceRegistry.filter((s) => s.requiredForPhase2);
 }
 
-export function listOptionalServices(): ServiceEntry[] {
-  return Object.values(serviceRegistry).filter((s) => !s.required);
+export function getOptionalServices(): ServiceEntry[] {
+  return serviceRegistry.filter((s) => !s.requiredForPhase2);
 }
 
-export function getHealthCheckEndpoints(): Array<{ key: string; strategy: ServiceEntry['healthCheckStrategy']; host: string; port: number }> {
-  return Object.values(serviceRegistry).map((s) => ({
-    key: s.key,
-    strategy: s.healthCheckStrategy,
-    host: s.internalHost,
-    port: s.internalPort,
-  }));
+export function getPublicServices(): ServiceEntry[] {
+  return serviceRegistry.filter((s) => s.publicExposureRecommended);
 }
