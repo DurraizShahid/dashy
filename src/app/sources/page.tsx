@@ -34,14 +34,14 @@ export default function SourcesPage() {
       case "Error":
         return "bg-[#FFEBEE] text-[#C62828]"
       default:
-        return "bg-[#F5F5F5] text-[#7B7592]"
+        return "bg-[#F5F5F5] text-muted-foreground"
     }
   }
 
   return (
-    <div className="bg-[#C4CBDE] h-screen overflow-hidden">
-      <div className="h-full max-w-[1400px] mx-auto py-4 px-4">
-        <div className="h-full bg-white rounded-[36px] p-5 shadow-elevated">
+    <div className="bg-background h-screen overflow-hidden">
+      <div className="h-full py-4 px-4">
+        <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
           <div className="flex gap-5 h-full">
             <CRMSidebar activeItem="sources" />
 
@@ -52,10 +52,10 @@ export default function SourcesPage() {
                 {sources.map((source, i) => (
                   <div
                     key={source.name}
-                    className="bg-white rounded-[20px] p-5 shadow-card border border-[#E9E7F0]"
+                    className="bg-card rounded-[20px] p-5 shadow-card border border-border"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-poppins font-semibold text-[#28243D]">
+                      <h3 className="font-poppins font-semibold text-foreground">
                         {source.name}
                       </h3>
                       <span
@@ -67,7 +67,7 @@ export default function SourcesPage() {
                       </span>
                     </div>
 
-                    <div className="space-y-2 mb-4 text-sm text-[#7B7592]">
+                    <div className="space-y-2 mb-4 text-sm text-muted-foreground">
                       <p>{source.leadsFound} leads found</p>
                       <p>{source.hotLeads} hot leads</p>
                       <p>Avg score: {source.avgScore}</p>
@@ -75,8 +75,8 @@ export default function SourcesPage() {
 
                     <div className="mb-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-[#7B7592]">Success Rate</span>
-                        <span className="text-xs font-medium text-[#28243D]">
+                        <span className="text-xs text-muted-foreground">Success Rate</span>
+                        <span className="text-xs font-medium text-foreground">
                           {source.successRate}%
                         </span>
                       </div>
@@ -90,7 +90,7 @@ export default function SourcesPage() {
                       </div>
                     </div>
 
-                    <p className="text-xs text-[#7B7592] mb-2">
+                    <p className="text-xs text-muted-foreground mb-2">
                       Last run: {source.lastRun}
                     </p>
 
@@ -103,7 +103,7 @@ export default function SourcesPage() {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => togglePause(i)}
-                        className="flex items-center gap-1.5 rounded-lg bg-[#F7F7F8] border border-[#E9E7F0] px-3 py-1.5 text-xs font-medium text-[#28243D] hover:bg-[#EEEAF6] transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg bg-muted border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
                       >
                         {source.status === "Active" ? (
                           <>

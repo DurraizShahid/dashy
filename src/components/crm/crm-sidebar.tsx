@@ -53,7 +53,7 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto no-scrollbar">
         {navItems.map((item) => {
           const isActive = activeItem === item.label.toLowerCase()
           return (

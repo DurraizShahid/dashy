@@ -11,9 +11,9 @@ const reviewLeads = mockLeads.filter(
 
 export default function ReviewQueuePage() {
   return (
-    <div className="bg-[#C4CBDE] h-screen overflow-hidden">
-      <div className="h-full max-w-[1400px] mx-auto py-4 px-4">
-        <div className="h-full bg-white rounded-[36px] p-5 shadow-elevated">
+    <div className="bg-background h-screen overflow-hidden">
+      <div className="h-full py-4 px-4">
+        <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
           <div className="flex gap-5 h-full">
             <CRMSidebar activeItem="leads" />
 
@@ -27,18 +27,18 @@ export default function ReviewQueuePage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[20px] shadow-card overflow-hidden mx-6 mb-6">
+              <div className="bg-card rounded-[20px] shadow-card overflow-hidden mx-6 mb-6">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-[#F7F7F8]">
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Lead</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Product</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Source</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Score</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Intent</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Status</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Actions</th>
+                      <tr className="bg-muted">
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Lead</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Product</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Source</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Score</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Intent</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Status</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -49,15 +49,15 @@ export default function ReviewQueuePage() {
                           .join("")
                           .slice(0, 2)
                         return (
-                          <tr key={lead.id} className="border-b border-[#E9E7F0] hover:bg-[#F7F7F8] transition-colors">
+                          <tr key={lead.id} className="border-b border-border hover:bg-muted transition-colors">
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-[#EEEAF6] text-[#504098] text-xs flex items-center justify-center font-medium">
                                   {initials}
                                 </div>
                                 <div>
-                                  <p className="text-sm text-[#28243D] font-medium">{lead.companyName}</p>
-                                  <p className="text-xs text-[#7B7592]">{lead.contactName}</p>
+                                  <p className="text-sm text-foreground font-medium">{lead.companyName}</p>
+                                  <p className="text-xs text-muted-foreground">{lead.contactName}</p>
                                 </div>
                               </div>
                             </td>

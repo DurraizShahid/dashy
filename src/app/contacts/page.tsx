@@ -10,9 +10,9 @@ export default function ContactsPage() {
   const countries = [...new Set(mockContacts.map((c) => c.country))].length
 
   return (
-    <div className="bg-[#C4CBDE] h-screen overflow-hidden">
-      <div className="h-full max-w-[1400px] mx-auto py-4 px-4">
-        <div className="h-full bg-white rounded-[36px] p-5 shadow-elevated">
+    <div className="bg-background h-screen overflow-hidden">
+      <div className="h-full py-4 px-4">
+        <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
           <div className="flex gap-5 h-full">
             <CRMSidebar activeItem="contacts" />
 
@@ -31,18 +31,18 @@ export default function ContactsPage() {
                 </span>
               </div>
 
-              <div className="bg-white rounded-[20px] shadow-card overflow-hidden mx-6 mb-6">
+              <div className="bg-card rounded-[20px] shadow-card overflow-hidden mx-6 mb-6">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-[#F7F7F8]">
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Contact</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Company</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Job Title</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Country</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Source</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Status</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Created</th>
+                      <tr className="bg-muted">
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Contact</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Company</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Job Title</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Country</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Source</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Status</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Created</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -55,7 +55,7 @@ export default function ContactsPage() {
                         return (
                           <tr
                             key={contact.id}
-                            className="border-b border-[#E9E7F0] hover:bg-[#F7F7F8] transition-colors"
+                            className="border-b border-border hover:bg-muted transition-colors"
                           >
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
@@ -63,17 +63,17 @@ export default function ContactsPage() {
                                   {initials}
                                 </div>
                                 <div>
-                                  <p className="text-sm text-[#28243D] font-medium">{contact.fullName}</p>
-                                  <p className="text-xs text-[#7B7592]">{contact.email}</p>
+                                  <p className="text-sm text-foreground font-medium">{contact.fullName}</p>
+                                  <p className="text-xs text-muted-foreground">{contact.email}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-sm text-[#28243D]">{contact.companyName}</td>
-                            <td className="px-4 py-3 text-sm text-[#28243D]">{contact.jobTitle}</td>
-                            <td className="px-4 py-3 text-sm text-[#28243D]">{contact.country}</td>
+                            <td className="px-4 py-3 text-sm text-foreground">{contact.companyName}</td>
+                            <td className="px-4 py-3 text-sm text-foreground">{contact.jobTitle}</td>
+                            <td className="px-4 py-3 text-sm text-foreground">{contact.country}</td>
                             <td className="px-4 py-3"><SourceBadge source={contact.source} /></td>
                             <td className="px-4 py-3"><StatusBadge status={contact.status} /></td>
-                            <td className="px-4 py-3 text-sm text-[#7B7592]">{contact.createdAt}</td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{contact.createdAt}</td>
                           </tr>
                         )
                       })}

@@ -1,25 +1,45 @@
 "use client"
 
-import { Search } from "lucide-react"
+import { Moon, Search, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
 
 import { cn } from "@/lib/utils"
+import { useEffect, useState } from "react"
 
 interface CRMTopbarProps {
   title: string
   subtitle?: string
 }
 
+function ThemeToggle() {
+  const [mounted, setMounted] = useState(false)
+  const { theme, setTheme } = useTheme()
+
+  useEffect(() => setMounted(true), [])
+
+  if (!mounted) {
+    return <div className="size-8" />
+  }
+
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="flex size-8 items-center justify-center rounded-lg border border-input bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+    >
+      {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </button>
+  )
+}
+
 export function CRMTopbar({ title, subtitle }: CRMTopbarProps) {
   return (
     <div className="flex items-center justify-between px-6 py-3">
       <div>
-        <p className="text-xs" style={{ color: "#7B7592" }}>
+        <p className="text-xs text-muted-foreground">
           HelpTribe CRM
         </p>
-        <h1
-          className="font-poppins text-lg font-semibold"
-          style={{ color: "#28243D" }}
-        >
+        <h1 className="font-poppins text-lg font-semibold text-foreground">
           {title}
         </h1>
         {subtitle && (
@@ -41,9 +61,11 @@ export function CRMTopbar({ title, subtitle }: CRMTopbarProps) {
           />
         </div>
 
+        <ThemeToggle />
+
         <div
           className="flex size-8 items-center justify-center rounded-full text-xs font-medium text-white"
-          style={{ backgroundColor: "#7060B8" }}
+          style={{ backgroundColor: "var(--crm-purple)" }}
         >
           AJ
         </div>

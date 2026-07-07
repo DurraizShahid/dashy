@@ -29,9 +29,9 @@ export default function DashboardPage() {
   const displayLeads = activeTab === "hot" ? hotLeads : reviewLeads
 
   return (
-    <div className="bg-[#C4CBDE] h-screen overflow-hidden">
-      <div className="h-full max-w-[1400px] mx-auto py-4 px-4">
-        <div className="h-full bg-white rounded-[36px] p-5 shadow-elevated">
+    <div className="bg-background h-screen overflow-hidden">
+      <div className="h-full py-4 px-4">
+        <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
           <div className="flex gap-5 h-full">
             <CRMSidebar activeItem="dashboard" />
 
@@ -44,7 +44,7 @@ export default function DashboardPage() {
                 <div className="flex-1 min-h-[240px] rounded-[24px] p-6 gradient-purple flex flex-col justify-between">
                   <div className="flex items-start justify-between">
                     <h2 className="font-poppins text-xl font-semibold text-white">Lead Overview</h2>
-                    <span className="rounded-full bg-white/20 px-3 py-1 text-xs text-white">Jul 2025</span>
+                    <span className="rounded-full bg-card/20 px-3 py-1 text-xs text-white">Jul 2025</span>
                   </div>
 
                   <div className="grid grid-cols-4 gap-4 mt-4">
@@ -86,7 +86,7 @@ export default function DashboardPage() {
                     <p className="text-sm text-white/60 mt-0.5">Top Product: Dilivygo</p>
                   </div>
                   <div className="flex justify-end">
-                    <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-full bg-card/20 flex items-center justify-center">
                       <ArrowRight className="w-4 h-4 text-white" />
                     </div>
                   </div>
@@ -98,7 +98,7 @@ export default function DashboardPage() {
                 {productCards.map((card) => {
                   const percentage = (card.count / 500) * 100
                   return (
-                    <div key={card.name} className="bg-white rounded-[20px] p-4 shadow-card">
+                    <div key={card.name} className="bg-card rounded-[20px] p-4 shadow-card">
                       <div className="flex items-center justify-between mb-3">
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -110,8 +110,8 @@ export default function DashboardPage() {
                           {card.hot} hot
                         </span>
                       </div>
-                      <p className="text-sm text-[#7B7592]">{card.name}</p>
-                      <p className="text-2xl font-semibold font-poppins text-[#28243D] mt-1">{card.count}</p>
+                      <p className="text-sm text-muted-foreground">{card.name}</p>
+                      <p className="text-2xl font-semibold font-poppins text-foreground mt-1">{card.count}</p>
                       <div className="bg-[#E9E7F0] rounded-full h-1.5 mt-3">
                         <div className="h-1.5 rounded-full" style={{ width: `${percentage}%`, backgroundColor: card.barColor }} />
                       </div>
@@ -123,8 +123,8 @@ export default function DashboardPage() {
               {/* Row 3 */}
               <div className="flex gap-4">
                 {/* Leads by Source */}
-                <div className="flex-1 bg-white rounded-[20px] p-5 shadow-card">
-                  <h3 className="font-poppins font-semibold text-[#28243D] mb-4">Leads by Source</h3>
+                <div className="flex-1 bg-card rounded-[20px] p-5 shadow-card">
+                  <h3 className="font-poppins font-semibold text-foreground mb-4">Leads by Source</h3>
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={leadsBySource} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
                       <XAxis
@@ -162,15 +162,15 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Right Panel */}
-                <div className="w-[300px] bg-white rounded-[20px] p-5 shadow-card shrink-0">
-                  <h3 className="font-poppins font-semibold text-[#28243D] mb-3">Priority Leads</h3>
+                <div className="w-[300px] bg-card rounded-[20px] p-5 shadow-card shrink-0">
+                  <h3 className="font-poppins font-semibold text-foreground mb-3">Priority Leads</h3>
                   <div className="flex gap-2 mb-4">
                     <button
                       onClick={() => setActiveTab("hot")}
                       className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
                         activeTab === "hot"
                           ? "bg-[#7060B8] text-white"
-                          : "bg-[#EEEAF6] text-[#504098] hover:bg-[#DDD8EE]"
+                          : "bg-[#EEEAF6] text-[#504098] hover:bg-muted"
                       }`}
                     >
                       Hot
@@ -180,7 +180,7 @@ export default function DashboardPage() {
                       className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
                         activeTab === "review"
                           ? "bg-[#7060B8] text-white"
-                          : "bg-[#EEEAF6] text-[#504098] hover:bg-[#DDD8EE]"
+                          : "bg-[#EEEAF6] text-[#504098] hover:bg-muted"
                       }`}
                     >
                       Review
@@ -200,7 +200,7 @@ export default function DashboardPage() {
                             {initials}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#28243D] truncate">{lead.companyName}</p>
+                            <p className="text-sm font-medium text-foreground truncate">{lead.companyName}</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <ProductBadge product={lead.product} />
                             </div>
@@ -213,12 +213,12 @@ export default function DashboardPage() {
 
                   {/* Market Snapshot */}
                   <div className="mt-5 rounded-[16px] bg-[#F7F5FA] p-4">
-                    <p className="text-xs font-semibold text-[#28243D] mb-3">Market Snapshot</p>
+                    <p className="text-xs font-semibold text-foreground mb-3">Market Snapshot</p>
                     <div className="flex gap-4">
                       {marketSnapshot.map((m) => (
                         <div key={m.region} className="flex items-center gap-1.5">
                           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
-                          <span className="text-[11px] text-[#7B7592]">{m.region}</span>
+                          <span className="text-[11px] text-muted-foreground">{m.region}</span>
                         </div>
                       ))}
                     </div>

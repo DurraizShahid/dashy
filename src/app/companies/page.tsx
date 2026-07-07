@@ -10,9 +10,9 @@ export default function CompaniesPage() {
   const products = [...new Set(mockCompanies.map((c) => c.productFit))].length
 
   return (
-    <div className="bg-[#C4CBDE] h-screen overflow-hidden">
-      <div className="h-full max-w-[1400px] mx-auto py-4 px-4">
-        <div className="h-full bg-white rounded-[36px] p-5 shadow-elevated">
+    <div className="bg-background h-screen overflow-hidden">
+      <div className="h-full py-4 px-4">
+        <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
           <div className="flex gap-5 h-full">
             <CRMSidebar activeItem="companies" />
 
@@ -31,38 +31,38 @@ export default function CompaniesPage() {
                 </span>
               </div>
 
-              <div className="bg-white rounded-[20px] shadow-card overflow-hidden mx-6 mb-6">
+              <div className="bg-card rounded-[20px] shadow-card overflow-hidden mx-6 mb-6">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-[#F7F7F8]">
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Company</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Industry</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Product</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Country</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">City</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Employees</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Leads</th>
-                        <th className="text-xs uppercase text-[#7B7592] font-medium px-4 py-3 text-left">Created</th>
+                      <tr className="bg-muted">
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Company</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Industry</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Product</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Country</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">City</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Employees</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Leads</th>
+                        <th className="text-xs uppercase text-muted-foreground font-medium px-4 py-3 text-left">Created</th>
                       </tr>
                     </thead>
                     <tbody>
                       {mockCompanies.map((company) => (
                         <tr
                           key={company.id}
-                          className="border-b border-[#E9E7F0] hover:bg-[#F7F7F8] transition-colors"
+                          className="border-b border-border hover:bg-muted transition-colors"
                         >
                           <td className="px-4 py-3">
-                            <p className="text-sm font-medium text-[#28243D]">{company.name}</p>
-                            <p className="text-xs text-[#7B7592]">{company.website}</p>
+                            <p className="text-sm font-medium text-foreground">{company.name}</p>
+                            <p className="text-xs text-muted-foreground">{company.website}</p>
                           </td>
-                          <td className="px-4 py-3 text-sm text-[#28243D]">{company.industry}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{company.industry}</td>
                           <td className="px-4 py-3"><ProductBadge product={company.productFit} /></td>
-                          <td className="px-4 py-3 text-sm text-[#28243D]">{company.country}</td>
-                          <td className="px-4 py-3 text-sm text-[#28243D]">{company.city}</td>
-                          <td className="px-4 py-3 text-sm text-[#28243D]">{company.employeeCount}</td>
-                          <td className="px-4 py-3 text-sm text-[#28243D]">{company.leadCount}</td>
-                          <td className="px-4 py-3 text-sm text-[#7B7592]">{company.createdAt}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{company.country}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{company.city}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{company.employeeCount}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{company.leadCount}</td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">{company.createdAt}</td>
                         </tr>
                       ))}
                     </tbody>
