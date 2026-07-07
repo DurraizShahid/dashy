@@ -14,6 +14,7 @@ import {
   BarChart3,
   Settings,
   FileText,
+  Brain,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
@@ -76,6 +77,26 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
             </Link>
           )
         })}
+
+        {/* Hive Mind section */}
+        <div className={cn(
+          "border-t border-white/10",
+          expanded ? "mx-0 mt-2 mb-1" : "mx-2 mt-2 mb-1"
+        )} />
+        <Link
+          href="/hive-mind"
+          className={cn(
+            "flex items-center gap-3 rounded-xl text-white transition-colors shrink-0",
+            expanded ? "px-3 py-2.5" : "h-10 w-10 justify-center mx-auto",
+            activeItem === "hive-mind" ? "bg-white/15" : "hover:bg-white/10"
+          )}
+          title="Hive Mind"
+        >
+          <Brain className="h-5 w-5 shrink-0" />
+          {expanded && (
+            <span className="text-sm font-medium truncate">Hive Mind</span>
+          )}
+        </Link>
       </nav>
 
       {/* Bottom section */}
