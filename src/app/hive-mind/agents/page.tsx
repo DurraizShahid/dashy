@@ -3,47 +3,49 @@
 import { useState } from "react";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { AuthGate } from "@/components/auth/auth-gate";
-import { createClient } from "@/lib/hive-mind/client";
+import { useHiveMindClient } from "@/lib/hive-mind/provider";
+import { useTenantProject, withContext } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import {
   Bot,
   Loader2,
   Send,
   XCircle,
+  AlertTriangle,
+  FileText,
+  Quote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { AgentContextResponse } from "@/lib/hive-mind/types";
 
 function AgentQueryForm() {
-  const [query, setQuery] = useState("");
-  const [contextKey, setContextKey] = useState("");
-  const [contextValue, setContextValue] = useState("");
-  const [response, setResponse] = useState<{
-    answer: string;
-    sources: string[];
-    confidence: number;
-  } | null>(null);
+  const { client } = useHiveMindClient();
+  const tenantCtx = useTenantProject();
+  const [task, setTask] = useState("");
+  const [agentType, setAgentType] = useState("general_agent");
+  const [response, setResponse] = useState<AgentContextResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
+    const t = task.trim();
+    if (!t || !client) return;
 
     setLoading(true);
     setError(null);
     setResponse(null);
 
     try {
-      const client = createClient();
-      const context: Record<string, string> = {};
-      if (contextKey.trim() && contextValue.trim()) {
-        context[contextKey.trim()] = contextValue.trim();
-      }
-      const result = await client.queryAgentContext({
-        query: q,
-        context: Object.keys(context).length > 0 ? context : undefined,
-      });
+      const result = await client.queryAgentContext(
+        withContext(
+          {
+            task: t,
+            agentType,
+          },
+          tenantCtx
+        )
+      );
       setResponse(result);
     } catch (err) {
       if (err instanceof HiveMindApiError) {
@@ -73,15 +75,15 @@ function AgentQueryForm() {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label
-              htmlFor="agent-query"
+              htmlFor="agent-task"
               className="text-xs font-medium text-foreground mb-1 block"
             >
-              Query
+              Task
             </label>
             <textarea
-              id="agent-query"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              id="agent-task"
+              value={task}
+              onChange={(e) => setTask(e.target.value)}
               placeholder="What information do you need?"
               rows={3}
               required
@@ -92,50 +94,31 @@ function AgentQueryForm() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label
-                htmlFor="context-key"
-                className="text-xs font-medium text-foreground mb-1 block"
-              >
-                Context key (optional)
-              </label>
-              <input
-                id="context-key"
-                type="text"
-                value={contextKey}
-                onChange={(e) => setContextKey(e.target.value)}
-                placeholder="e.g., product"
-                className={cn(
-                  "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                )}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="context-value"
-                className="text-xs font-medium text-foreground mb-1 block"
-              >
-                Context value
-              </label>
-              <input
-                id="context-value"
-                type="text"
-                value={contextValue}
-                onChange={(e) => setContextValue(e.target.value)}
-                placeholder="e.g., Dilivygo"
-                className={cn(
-                  "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                )}
-              />
-            </div>
+          <div>
+            <label
+              htmlFor="agent-type"
+              className="text-xs font-medium text-foreground mb-1 block"
+            >
+              Agent Type
+            </label>
+            <select
+              id="agent-type"
+              value={agentType}
+              onChange={(e) => setAgentType(e.target.value)}
+              className={cn(
+                "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
+                "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              )}
+            >
+              <option value="general_agent">General Agent</option>
+              <option value="research_agent">Research Agent</option>
+              <option value="support_agent">Support Agent</option>
+            </select>
           </div>
 
           <button
             type="submit"
-            disabled={loading || !query.trim()}
+            disabled={loading || !task.trim()}
             className={cn(
               "inline-flex items-center gap-2 h-9 px-4 rounded-xl text-sm font-medium transition-colors",
               "bg-primary text-primary-foreground hover:bg-primary/90",
@@ -157,7 +140,7 @@ function AgentQueryForm() {
         </form>
       </div>
 
-      {/* Response */}
+      {/* Error */}
       {error && (
         <div className="rounded-[20px] bg-card p-4 shadow-card">
           <div className="flex items-start gap-2">
@@ -167,43 +150,126 @@ function AgentQueryForm() {
         </div>
       )}
 
+      {/* Response */}
       {response && (
-        <div className="rounded-[20px] bg-card p-6 shadow-card space-y-3">
+        <div className="rounded-[20px] bg-card p-6 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <Bot className="size-5 text-primary" />
             <h3 className="font-poppins font-semibold text-foreground text-sm">
               Agent Response
             </h3>
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-                response.confidence >= 0.7
-                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                  : response.confidence >= 0.4
-                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                    : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-              )}
-            >
-              {Math.round(response.confidence * 100)}% confidence
-            </span>
           </div>
 
-          <p className="text-sm text-foreground leading-relaxed">
-            {response.answer}
-          </p>
+          {/* Mission */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">
+              Mission
+            </p>
+            <p className="text-sm text-foreground leading-relaxed">
+              {response.mission}
+            </p>
+          </div>
 
-          {response.sources.length > 0 && (
+          {/* Relevant Documents */}
+          {response.relevantDocuments.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">
-                Sources
+              <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                <FileText className="size-3" />
+                Relevant Documents
               </p>
               <ul className="text-xs text-muted-foreground space-y-0.5">
-                {response.sources.map((source, i) => (
+                {response.relevantDocuments.map((doc, i) => (
                   <li key={i} className="truncate">
-                    {source}
+                    {doc}
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Relevant Chunks */}
+          {response.relevantChunks.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Relevant Chunks
+              </p>
+              <div className="flex flex-col gap-2">
+                {response.relevantChunks.map((chunk, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl bg-muted/50 p-3"
+                  >
+                    <p className="text-xs text-foreground leading-relaxed">
+                      {chunk.content}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[11px] text-muted-foreground truncate">
+                        {chunk.source}
+                      </span>
+                      {chunk.score !== undefined && (
+                        <span className="text-[11px] text-muted-foreground">
+                          Score: {chunk.score.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Citations */}
+          {response.citations.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                <Quote className="size-3" />
+                Citations
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                {response.citations.map((citation, i) => (
+                  <li key={i}>
+                    {citation.title && (
+                      <span className="font-medium">{citation.title}</span>
+                    )}
+                    {citation.url && (
+                      <a
+                        href={citation.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline ml-1"
+                      >
+                        {citation.url}
+                      </a>
+                    )}
+                    {citation.source && (
+                      <span className="ml-1">({citation.source})</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Retrieval Summary */}
+          {response.retrievalSummary && (
+            <div className="rounded-xl bg-blue-50 dark:bg-blue-950/20 p-3">
+              <p className="text-xs text-muted-foreground">
+                {response.retrievalSummary}
+              </p>
+            </div>
+          )}
+
+          {/* Warnings */}
+          {response.warnings && response.warnings.length > 0 && (
+            <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-3 flex items-start gap-2">
+              <AlertTriangle className="size-4 shrink-0 text-amber-500 mt-0.5" />
+              <div>
+                {response.warnings.map((w, i) => (
+                  <p key={i} className="text-xs text-muted-foreground">
+                    {w}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { AuthGate } from "@/components/auth/auth-gate";
+import { useHiveMindClient } from "@/lib/hive-mind/provider";
+import { useTenantProject, withContext } from "@/lib/hive-mind/hive-mind-context";
+import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import { Search, BookOpen, Loader2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/hive-mind/client";
-import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import type { KnowledgeSearchResult } from "@/lib/hive-mind/types";
 
 function KnowledgeSearch() {
+  const { client } = useHiveMindClient();
+  const tenantCtx = useTenantProject();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KnowledgeSearchResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -20,15 +23,16 @@ function KnowledgeSearch() {
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const q = query.trim();
-    if (!q) return;
+    if (!q || !client) return;
 
     setLoading(true);
     setError(null);
     setSearched(true);
 
     try {
-      const client = createClient();
-      const response = await client.searchKnowledge(q);
+      const response = await client.searchKnowledge(
+        withContext({ query: q, limit: 10 }, tenantCtx)
+      );
       setResults(response.results);
       setTotal(response.total);
     } catch (err) {

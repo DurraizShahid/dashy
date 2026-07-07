@@ -9,7 +9,7 @@
  */
 
 const requiredPublicVars = [
-  "NEXT_PUBLIC_HIVE_MIND_API_URL",
+  "NEXT_PUBLIC_HIVEMIND_API_URL",
 ] as const;
 
 type PublicEnv = Record<(typeof requiredPublicVars)[number], string>;
@@ -63,13 +63,15 @@ export function getPublicEnv(key: (typeof requiredPublicVars)[number]): string {
  * Use this for conditionally rendering UI sections.
  */
 export function isHiveMindEnabled(): boolean {
-  return !!process.env.NEXT_PUBLIC_HIVE_MIND_API_URL;
+  return !!(
+    process.env.NEXT_PUBLIC_HIVEMIND_API_URL ||
+    process.env.HIVEMIND_API_URL
+  );
 }
 
 /**
- * Returns the Hive Mind API key, if configured.
- * Used to authenticate API client for protected endpoints.
+ * Returns the Hive Mind API URL for client-side use.
  */
-export function getHiveMindApiKey(): string | undefined {
-  return process.env.NEXT_PUBLIC_HIVE_MIND_API_KEY || undefined;
+export function getHiveMindApiUrl(): string {
+  return process.env.NEXT_PUBLIC_HIVEMIND_API_URL || "";
 }

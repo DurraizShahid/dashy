@@ -1,54 +1,51 @@
 /**
  * Hive Mind API Client.
  *
- * Type-safe fetch wrapper around the Hive Mind REST API.
- * All endpoints are relative to the configured base URL.
+ * Type-safe fetch wrapper around the Hive Mind API, routed through
+ * the server-side proxy at /api/hive-mind/*.
+ *
+ * All auth (Keycloak Bearer token) is handled server-side by the proxy.
+ * No tokens or API keys are managed in the browser.
  *
  * Usage:
  *   const client = createClient();
  *   const health = await client.getHealth();
  */
 
-import { getPublicEnv } from "@/lib/env";
 import {
   type HiveMindClientConfig,
   type HiveMindServiceInfo,
   type HealthCheckResponse,
   type VersionInfo,
   type ServiceRegistryEntry,
+  type KnowledgeSearchRequest,
   type KnowledgeSearchResponse,
-  type JobStatus,
   type AgentContextRequest,
   type AgentContextResponse,
+  type IngestUrlRequest,
+  type IngestUrlResponse,
+  type JobStatus,
+  type DocumentInfo,
 } from "./types";
 import {
   HiveMindApiError,
-  HiveMindConfigError,
   HiveMindNetworkError,
 } from "./errors";
 
 const DEFAULT_TIMEOUT = 15_000;
 
 /**
- * Creates a Hive Mind API client.
- *
- * When `config` is omitted, reads base URL from
- * `NEXT_PUBLIC_HIVE_MIND_API_URL` env var.
+ * Creates a Hive Mind API client that routes through the server-side proxy.
  */
 export function createClient(config?: Partial<HiveMindClientConfig>) {
-  const baseUrl =
-    config?.baseUrl ?? getPublicEnv("NEXT_PUBLIC_HIVE_MIND_API_URL");
-
-  if (!baseUrl) {
-    throw new HiveMindConfigError(
-      "Hive Mind API URL is not configured. " +
-        "Set NEXT_PUBLIC_HIVE_MIND_API_URL in your .env.local file."
-    );
-  }
+  // When baseUrl is provided and is NOT the proxy path, use it directly
+  // (e.g., for server-side usage with HIVEMIND_API_URL).
+  // Otherwise, default to the Next.js API proxy route.
+  const proxyBase = "/api/hive-mind";
+  const baseUrl = config?.baseUrl ?? proxyBase;
 
   const normalizedBase = baseUrl.replace(/\/+$/, "");
   const timeout = config?.timeout ?? DEFAULT_TIMEOUT;
-  let token: string | undefined = config?.token;
 
   async function request<T>(
     path: string,
@@ -59,10 +56,6 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
 
     if (!headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
-    }
-
-    if (token && !headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${token}`);
     }
 
     const controller = new AbortController();
@@ -98,20 +91,6 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     }
   }
 
-  // ─── Auth ────────────────────────────────────────────────────
-
-  function setAuth(newToken: string) {
-    token = newToken;
-  }
-
-  function clearAuth() {
-    token = undefined;
-  }
-
-  function getToken(): string | undefined {
-    return token;
-  }
-
   // ─── Public Endpoints ────────────────────────────────────────
 
   function getServiceInfo() {
@@ -132,22 +111,28 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     return request<ServiceRegistryEntry[]>("/api/v1/service-registry");
   }
 
-  function searchKnowledge(query: string) {
-    const encoded = encodeURIComponent(query);
-    return request<KnowledgeSearchResponse>(
-      `/api/v1/knowledge/search?q=${encoded}`
-    );
+  function searchKnowledge(req: KnowledgeSearchRequest) {
+    return request<KnowledgeSearchResponse>("/api/v1/knowledge/search", {
+      method: "POST",
+      body: JSON.stringify(req),
+    });
   }
 
-  function ingestUrl(url: string, options?: { source?: string }) {
-    return request<{ jobId: string }>("/api/v1/ingest/url", {
+  function ingestUrl(req: IngestUrlRequest) {
+    return request<IngestUrlResponse>("/api/v1/ingest/url", {
       method: "POST",
-      body: JSON.stringify({ url, ...options }),
+      body: JSON.stringify(req),
     });
   }
 
   function getJobStatus(jobId: string) {
     return request<JobStatus>(`/api/v1/jobs/${encodeURIComponent(jobId)}`);
+  }
+
+  function getDocument(documentId: string) {
+    return request<DocumentInfo>(
+      `/api/v1/documents/${encodeURIComponent(documentId)}`
+    );
   }
 
   function queryAgentContext(req: AgentContextRequest) {
@@ -158,11 +143,6 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
   }
 
   return {
-    // Auth
-    setAuth,
-    clearAuth,
-    getToken,
-
     // Public
     getServiceInfo,
     getHealth,
@@ -173,6 +153,7 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     searchKnowledge,
     ingestUrl,
     getJobStatus,
+    getDocument,
     queryAgentContext,
 
     // Raw access for one-off endpoints

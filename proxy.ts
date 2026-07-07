@@ -12,7 +12,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function proxy(_req: NextRequest) {
+export function proxy(_req: NextRequest): NextResponse {
   // ─── Security Headers ───────────────────────────────────────────
   const response = NextResponse.next();
 

@@ -1,30 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { AuthGate } from "@/components/auth/auth-gate";
-import { createClient } from "@/lib/hive-mind/client";
+import { useHiveMindClient } from "@/lib/hive-mind/provider";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import {
   Loader2,
-  XCircle,
-  RefreshCw,
+  Search,
+  ArrowRight,
   Clock,
   CheckCircle2,
   AlertCircle,
   Play,
   X,
-  ArrowRight,
+  ListTodo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/lib/hive-mind/types";
-
-const JOB_IDS = [
-  "recent-job-1",
-  "recent-job-2",
-  "recent-job-3",
-] as const;
 
 const statusIcon: Record<string, typeof Clock> = {
   pending: Clock,
@@ -34,10 +28,7 @@ const statusIcon: Record<string, typeof Clock> = {
   cancelled: X,
 };
 
-const statusStyles: Record<
-  string,
-  string
-> = {
+const statusStyles: Record<string, string> = {
   pending:
     "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
   running:
@@ -50,167 +41,182 @@ const statusStyles: Record<
     "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
-type JobWithFetchState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "loaded"; job: JobStatus };
+function JobLookup() {
+  const { client } = useHiveMindClient();
+  const [jobId, setJobId] = useState("");
+  const [job, setJob] = useState<JobStatus | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-function JobCard({
-  jobId,
-  state,
-  onRetry,
-}: {
-  jobId: string;
-  state: JobWithFetchState;
-  onRetry: (id: string) => void;
-}) {
-  if (state.status === "loading") {
-    return (
-      <div className="rounded-xl bg-card p-4 shadow-card flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        <span>Loading job...</span>
-      </div>
-    );
+  async function handleLookup(e: React.FormEvent) {
+    e.preventDefault();
+    const id = jobId.trim();
+    if (!id || !client) return;
+
+    setLoading(true);
+    setError(null);
+    setJob(null);
+
+    try {
+      const result = await client.getJobStatus(id);
+      setJob(result);
+    } catch (err) {
+      if (err instanceof HiveMindApiError) {
+        setError(`API error ${err.status}: ${err.statusText}`);
+      } else if (err instanceof HiveMindNetworkError) {
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Lookup failed");
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
-  if (state.status === "error") {
-    return (
-      <div className="rounded-xl bg-card p-4 shadow-card">
-        <div className="flex items-start gap-2">
-          <XCircle className="size-4 shrink-0 text-destructive mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground">{state.message}</p>
-            <button
-              onClick={() => onRetry(jobId)}
-              className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-primary hover:underline"
-            >
-              <RefreshCw className="size-3" />
-              Retry
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const { job } = state;
-  const Icon = statusIcon[job.status] ?? Clock;
+  const Icon = job ? (statusIcon[job.status] ?? Clock) : Clock;
 
   return (
-    <Link href={`/hive-mind/jobs/${job.id}`}>
-      <div className="rounded-xl bg-card p-4 shadow-card hover:bg-muted/50 transition-colors cursor-pointer">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Icon
-              className={cn(
-                "size-5 shrink-0",
-                job.status === "completed" && "text-green-600",
-                job.status === "failed" && "text-destructive",
-                job.status === "running" && "text-amber-500",
-                job.status === "pending" && "text-blue-500",
-                job.status === "cancelled" && "text-muted-foreground"
-              )}
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {job.type}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(job.createdAt).toLocaleString()}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 shrink-0 ml-3">
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-                statusStyles[job.status]
-              )}
-            >
-              {job.status}
-            </span>
-            <ArrowRight className="size-4 text-muted-foreground" />
-          </div>
-        </div>
-
-        {/* Progress bar for running jobs */}
-        {job.status === "running" && (
-          <div className="mt-3">
-            <div className="h-1.5 rounded-full bg-muted">
-              <div
-                className="h-1.5 rounded-full bg-amber-500 transition-all duration-500"
-                style={{ width: `${job.progress}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              {job.progress}%
+    <div className="space-y-4">
+      {/* Missing endpoint notice */}
+      <div className="rounded-[20px] bg-card p-6 shadow-card">
+        <div className="flex items-start gap-3">
+          <ListTodo className="size-5 shrink-0 text-muted-foreground mt-0.5" />
+          <div>
+            <h3 className="font-poppins font-semibold text-foreground text-sm">
+              Job List Endpoint Needed
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              The Hive Mind backend does not yet provide a{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                GET /api/v1/jobs
+              </code>{" "}
+              endpoint to list all jobs. You can look up individual jobs by ID
+              below.
             </p>
           </div>
-        )}
+        </div>
       </div>
-    </Link>
-  );
-}
 
-function JobList() {
-  const [jobStates, setJobStates] = useState<Record<string, JobWithFetchState>>(
-    {}
-  );
-
-  function fetchJob(jobId: string) {
-    setJobStates((prev) => ({ ...prev, [jobId]: { status: "loading" } }));
-    const client = createClient();
-    client
-      .getJobStatus(jobId)
-      .then((job) => {
-        setJobStates((prev) => ({
-          ...prev,
-          [jobId]: { status: "loaded", job },
-        }));
-      })
-      .catch((err) => {
-        let message: string;
-        if (err instanceof HiveMindApiError) {
-          message = `API error ${err.status}: ${err.statusText}`;
-        } else if (err instanceof HiveMindNetworkError) {
-          message = err.message;
-        } else {
-          message = err instanceof Error ? err.message : "Unknown error";
-        }
-        setJobStates((prev) => ({
-          ...prev,
-          [jobId]: { status: "error", message },
-        }));
-      });
-  }
-
-  useEffect(() => {
-    JOB_IDS.forEach((id) => fetchJob(id));
-  }, []);
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="font-poppins font-semibold text-foreground">
-          Recent Jobs
+      {/* Lookup form */}
+      <div className="rounded-[20px] bg-card p-6 shadow-card">
+        <h3 className="font-poppins font-semibold text-foreground mb-3">
+          Look Up Job
         </h3>
-        <button
-          onClick={() => JOB_IDS.forEach((id) => fetchJob(id))}
-          className="flex size-8 items-center justify-center rounded-lg border border-input text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          title="Refresh all"
-        >
-          <RefreshCw className="size-4" />
-        </button>
+        <form onSubmit={handleLookup} className="flex gap-2">
+          <input
+            type="text"
+            value={jobId}
+            onChange={(e) => setJobId(e.target.value)}
+            placeholder="Enter job ID..."
+            className={cn(
+              "flex-1 h-10 rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
+              "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            )}
+          />
+          <button
+            type="submit"
+            disabled={loading || !jobId.trim()}
+            className={cn(
+              "inline-flex items-center gap-2 h-10 px-4 rounded-xl text-sm font-medium transition-colors shrink-0",
+              "bg-primary text-primary-foreground hover:bg-primary/90",
+              "disabled:opacity-50 disabled:pointer-events-none"
+            )}
+          >
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Search className="size-4" />
+            )}
+            Look Up
+          </button>
+        </form>
       </div>
 
-      {JOB_IDS.map((id) => (
-        <JobCard
-          key={id}
-          jobId={id}
-          state={jobStates[id] ?? { status: "loading" }}
-          onRetry={fetchJob}
-        />
-      ))}
+      {/* Error */}
+      {error && (
+        <div className="rounded-[20px] bg-card p-4 shadow-card">
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      )}
+
+      {/* Job result */}
+      {job && (
+        <div>
+          <Link href={`/hive-mind/jobs/${job.id}`}>
+            <div className="rounded-[20px] bg-card p-6 shadow-card hover:bg-muted/50 transition-colors cursor-pointer">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <Icon
+                    className={cn(
+                      "size-6",
+                      job.status === "completed" && "text-green-600",
+                      job.status === "failed" && "text-destructive",
+                      job.status === "running" && "text-amber-500",
+                      job.status === "pending" && "text-blue-500",
+                      job.status === "cancelled" && "text-muted-foreground"
+                    )}
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {job.type}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      ID: <code className="text-xs">{job.id}</code>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
+                      statusStyles[job.status]
+                    )}
+                  >
+                    {job.status}
+                  </span>
+                  <ArrowRight className="size-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              {/* Progress */}
+              {job.status === "running" && (
+                <div>
+                  <div className="h-1.5 rounded-full bg-muted">
+                    <div
+                      className="h-1.5 rounded-full bg-amber-500 transition-all duration-500"
+                      style={{ width: `${job.progress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {job.progress}%
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Created</p>
+                  <p className="text-sm text-foreground">
+                    {new Date(job.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Updated</p>
+                  <p className="text-sm text-foreground">
+                    {new Date(job.updatedAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {job.error && (
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 p-3 mt-3">
+                  <p className="text-xs text-muted-foreground">{job.error}</p>
+                </div>
+              )}
+            </div>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
@@ -228,7 +234,7 @@ export default function HiveMindJobsPage() {
           title="Job Monitoring"
           description="Track the status of content ingestion, processing, and analysis jobs."
         >
-          <JobList />
+          <JobLookup />
         </AuthGate>
       </div>
     </>

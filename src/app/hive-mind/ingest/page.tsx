@@ -3,41 +3,68 @@
 import { useState } from "react";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { AuthGate } from "@/components/auth/auth-gate";
-import { createClient } from "@/lib/hive-mind/client";
+import { useHiveMindClient } from "@/lib/hive-mind/provider";
+import { useTenantProject, withContext } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import { Globe, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const VISIBILITY_OPTIONS = [
+  { value: "company_internal", label: "Company Internal" },
+  { value: "team_only", label: "Team Only" },
+  { value: "public", label: "Public" },
+];
+
+const SENSITIVITY_OPTIONS = [
+  { value: "internal", label: "Internal" },
+  { value: "confidential", label: "Confidential" },
+  { value: "restricted", label: "Restricted" },
+];
+
 function IngestForm() {
+  const { client } = useHiveMindClient();
+  const tenantCtx = useTenantProject();
   const [url, setUrl] = useState("");
-  const [source, setSource] = useState("");
+  const [sourceName, setSourceName] = useState("");
+  const [visibilityScope, setVisibilityScope] = useState("company_internal");
+  const [sensitivityLevel, setSensitivityLevel] = useState("internal");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     status: "success" | "error";
     message: string;
     jobId?: string;
+    documentId?: string;
   } | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmedUrl = url.trim();
-    if (!trimmedUrl) return;
+    if (!trimmedUrl || !client) return;
 
     setLoading(true);
     setResult(null);
 
     try {
-      const client = createClient();
-      const response = await client.ingestUrl(trimmedUrl, {
-        source: source.trim() || undefined,
-      });
+      const response = await client.ingestUrl(
+        withContext(
+          {
+            url: trimmedUrl,
+            sourceName: sourceName.trim() || undefined,
+            visibilityScope,
+            sensitivityLevel,
+            tags: [],
+          },
+          tenantCtx
+        )
+      );
       setResult({
         status: "success",
         message: "Content ingestion started",
         jobId: response.jobId,
+        documentId: response.documentId,
       });
       setUrl("");
-      setSource("");
+      setSourceName("");
     } catch (err) {
       if (err instanceof HiveMindApiError) {
         setResult({
@@ -95,19 +122,69 @@ function IngestForm() {
               htmlFor="ingest-source"
               className="text-xs font-medium text-foreground mb-1 block"
             >
-              Source label (optional)
+              Source name (optional)
             </label>
             <input
               id="ingest-source"
               type="text"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
+              value={sourceName}
+              onChange={(e) => setSourceName(e.target.value)}
               placeholder="e.g., documentation, blog, competitor"
               className={cn(
                 "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
                 "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               )}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="ingest-visibility"
+                className="text-xs font-medium text-foreground mb-1 block"
+              >
+                Visibility
+              </label>
+              <select
+                id="ingest-visibility"
+                value={visibilityScope}
+                onChange={(e) => setVisibilityScope(e.target.value)}
+                className={cn(
+                  "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
+                  "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                )}
+              >
+                {VISIBILITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="ingest-sensitivity"
+                className="text-xs font-medium text-foreground mb-1 block"
+              >
+                Sensitivity
+              </label>
+              <select
+                id="ingest-sensitivity"
+                value={sensitivityLevel}
+                onChange={(e) => setSensitivityLevel(e.target.value)}
+                className={cn(
+                  "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
+                  "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                )}
+              >
+                {SENSITIVITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <button
@@ -157,6 +234,12 @@ function IngestForm() {
               {result.jobId && (
                 <p className="text-xs text-muted-foreground mt-1">
                   Job ID: <code className="text-xs">{result.jobId}</code>
+                </p>
+              )}
+              {result.documentId && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Document ID:{" "}
+                  <code className="text-xs">{result.documentId}</code>
                 </p>
               )}
             </div>

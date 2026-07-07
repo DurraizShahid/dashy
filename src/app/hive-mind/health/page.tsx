@@ -3,19 +3,20 @@
 import { useEffect, useState } from "react";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { HealthStatus } from "@/components/hive-mind/health-status";
-import { createClient } from "@/lib/hive-mind/client";
+import { useHiveMindClient } from "@/lib/hive-mind/provider";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import { Loader2, XCircle, RefreshCw } from "lucide-react";
 import type { VersionInfo } from "@/lib/hive-mind/types";
 
 export default function HiveMindHealthPage() {
+  const { client } = useHiveMindClient();
   const [version, setVersion] = useState<VersionInfo | null>(null);
   const [versionError, setVersionError] = useState<string | null>(null);
   const [loadingVersion, setLoadingVersion] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    const client = createClient();
+    if (!client) return;
     let cancelled = false;
 
     client
@@ -35,7 +36,7 @@ export default function HiveMindHealthPage() {
       .finally(() => { if (!cancelled) setLoadingVersion(false); });
 
     return () => { cancelled = true; };
-  }, [refreshKey]);
+  }, [client, refreshKey]);
 
   function handleRefresh() {
     setLoadingVersion(true);

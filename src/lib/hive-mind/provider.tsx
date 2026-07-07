@@ -1,6 +1,9 @@
 /**
  * HiveMindProvider — provides a singleton API client via React context.
  *
+ * The client routes all requests through the server-side proxy
+ * (/api/hive-mind/*), so no tokens or API keys are needed on the client.
+ *
  * Usage in root layout:
  *   <HiveMindProvider>
  *     {children}
@@ -19,7 +22,6 @@ import {
 } from "react";
 import { createClient, type HiveMindClient } from "./client";
 import { HiveMindConfigError } from "./errors";
-import { getHiveMindApiKey } from "@/lib/env";
 import type { HiveMindClientConfig } from "./types";
 
 interface HiveMindContextValue {
@@ -32,12 +34,7 @@ function createInitialState(
   config?: Partial<HiveMindClientConfig>
 ): HiveMindContextValue {
   try {
-    const apiKey = getHiveMindApiKey();
-    const mergedConfig: Partial<HiveMindClientConfig> = {
-      ...config,
-      token: config?.token ?? apiKey,
-    };
-    const client = createClient(mergedConfig);
+    const client = createClient(config);
     return { client, error: null, isReady: true };
   } catch (err) {
     const message =
@@ -58,7 +55,7 @@ const HiveMindContext = createContext<HiveMindContextValue>({
 
 interface HiveMindProviderProps {
   children: React.ReactNode;
-  /** Optional explicit config for testing or custom setup. */
+  /** Optional explicit config for testing or server-side usage. */
   config?: Partial<HiveMindClientConfig>;
 }
 
@@ -76,8 +73,8 @@ export function HiveMindProvider({ children, config }: HiveMindProviderProps) {
  * Access the Hive Mind API client from any component.
  * Returns { client, error, isReady }.
  *
- * When not ready (no env var set), `client` is null and `error` contains
- * the configuration message.
+ * The client routes through the server-side proxy which handles auth.
+ * When not ready, `client` is null and `error` contains the message.
  */
 export function useHiveMindClient(): HiveMindContextValue {
   return useContext(HiveMindContext);
