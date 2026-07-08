@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
-import { AuthGate } from "@/components/auth/auth-gate";
-import { createClient } from "@/lib/hive-mind/client";
+import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
-import { Globe, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Globe, Loader2, CheckCircle, XCircle, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function IngestForm() {
+  const { client, selectedTenantId, selectedProjectId, selectedTenant, selectedProject } = useHiveMind();
+
   const [url, setUrl] = useState("");
   const [source, setSource] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,25 +18,28 @@ function IngestForm() {
     status: "success" | "error";
     message: string;
     jobId?: string;
+    documentId?: string;
   } | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleUrlSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmedUrl = url.trim();
-    if (!trimmedUrl) return;
+    if (!trimmedUrl || !selectedTenantId) return;
 
     setLoading(true);
     setResult(null);
 
     try {
-      const client = createClient();
-      const response = await client.ingestUrl(trimmedUrl, {
+      const response = await client!.ingestUrl(trimmedUrl, {
         source: source.trim() || undefined,
+        tenantId: selectedTenantId,
+        projectId: selectedProjectId ?? undefined,
       });
       setResult({
         status: "success",
         message: "Content ingestion started",
         jobId: response.jobId,
+        documentId: response.documentId,
       });
       setUrl("");
       setSource("");
@@ -57,23 +62,44 @@ function IngestForm() {
     }
   }
 
+  if (!selectedTenantId) {
+    return (
+      <div className="rounded-[20px] bg-card p-6 shadow-card text-center">
+        <Upload className="size-8 mx-auto text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground">
+          Select an organization to ingest content.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Scope indicator */}
+      <div className="rounded-[20px] bg-muted/50 p-3">
+        <p className="text-xs text-muted-foreground">
+          Ingesting into{" "}
+          <span className="font-medium text-foreground">{selectedTenant?.name}</span>
+          {selectedProject && (
+            <>
+              {" / "}
+              <span className="font-medium text-foreground">{selectedProject.name}</span>
+            </>
+          )}
+        </p>
+      </div>
+
       <div className="rounded-[20px] bg-card p-6 shadow-card">
         <h3 className="font-poppins font-semibold text-foreground mb-1">
           Ingest URL
         </h3>
         <p className="text-xs text-muted-foreground mb-4">
-          Submit a URL to be crawled and indexed into the Hive Mind knowledge
-          base.
+          Submit a URL to be crawled and indexed into the Hive Mind knowledge base.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleUrlSubmit} className="space-y-3">
           <div>
-            <label
-              htmlFor="ingest-url"
-              className="text-xs font-medium text-foreground mb-1 block"
-            >
+            <label htmlFor="ingest-url" className="text-xs font-medium text-foreground mb-1 block">
               URL
             </label>
             <input
@@ -91,10 +117,7 @@ function IngestForm() {
           </div>
 
           <div>
-            <label
-              htmlFor="ingest-source"
-              className="text-xs font-medium text-foreground mb-1 block"
-            >
+            <label htmlFor="ingest-source" className="text-xs font-medium text-foreground mb-1 block">
               Source label (optional)
             </label>
             <input
@@ -156,7 +179,24 @@ function IngestForm() {
               </p>
               {result.jobId && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Job ID: <code className="text-xs">{result.jobId}</code>
+                  Job:{" "}
+                  <Link
+                    href={`/hive-mind/jobs/${result.jobId}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {result.jobId.slice(0, 8)}...
+                  </Link>
+                </p>
+              )}
+              {result.documentId && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Document:{" "}
+                  <Link
+                    href={`/hive-mind/documents/${result.documentId}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {result.documentId.slice(0, 8)}...
+                  </Link>
                 </p>
               )}
             </div>
@@ -176,12 +216,7 @@ export default function HiveMindIngestPage() {
       />
 
       <div className="px-6 pb-6 max-w-2xl">
-        <AuthGate
-          title="Content Ingestion"
-          description="Submit URLs to be crawled and indexed into the shared knowledge base."
-        >
-          <IngestForm />
-        </AuthGate>
+        <IngestForm />
       </div>
     </>
   );
