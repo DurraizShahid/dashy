@@ -1,40 +1,26 @@
-/**
- * GET /api/auth/logout
- *
- * Clears the session cookie and optionally redirects to Keycloak's
- * logout endpoint to end the SSO session.
- */
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionCookieOptions, getSessionFromRequest } from "@/lib/auth/session";
+import { getAuthConfig } from "@/lib/auth/config";
 
-import { NextResponse } from "next/server";
-import {
-  clearSessionCookie,
-  getSessionPayload,
-  isKeycloakConfigured,
-  getKeycloakIssuer,
-} from "@/lib/auth/session";
+export async function GET(request: NextRequest) {
+  const session = await getSessionFromRequest(request);
+  const cfg = getAuthConfig();
+  const cookie = getSessionCookieOptions();
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const redirectTo = searchParams.get("redirectTo") || "/";
+  const response = NextResponse.redirect(
+    `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}`
+  );
+  response.cookies.set(cookie.name, "", { ...cookie.options, maxAge: 0 });
 
-  // Get the current session to possibly redirect to Keycloak logout
-  const payload = await getSessionPayload();
-
-  await clearSessionCookie();
-
-  if (isKeycloakConfigured() && payload?.accessToken) {
-    const issuer = getKeycloakIssuer();
-    const origin =
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const logoutUrl = new URL(`${issuer}/protocol/openid-connect/logout`);
-    logoutUrl.searchParams.set(
-      "redirect_uri",
-      `${origin.replace(/\/+$/, "")}${redirectTo}`
+  if (session && cfg.keycloakUrl && cfg.realm) {
+    const logoutUrl = `${cfg.keycloakUrl}/realms/${cfg.realm}/protocol/openid-connect/logout`;
+    const idTokenHint = session.accessToken;
+    return NextResponse.redirect(
+      `${logoutUrl}?id_token_hint=${idTokenHint}&post_logout_redirect_uri=${encodeURIComponent(
+        process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"
+      )}`
     );
-    logoutUrl.searchParams.set("id_token_hint", payload.accessToken);
-
-    return NextResponse.redirect(logoutUrl);
   }
 
-  return NextResponse.redirect(new URL(redirectTo, request.url));
+  return response;
 }

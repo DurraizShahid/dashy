@@ -1,10 +1,3 @@
-/**
- * Shared types for Hive Mind API.
- *
- * These represent known request/response shapes from the Hive Mind backend.
- * See docs/architecture/hivemind-api-gaps-for-dashy.md for missing endpoints.
- */
-
 // ─── Public Endpoints ────────────────────────────────────────────
 
 export interface HiveMindServiceInfo {
@@ -46,15 +39,6 @@ export interface ServiceRegistryEntry {
   metadata?: Record<string, string>;
 }
 
-// ─── Knowledge Search ────────────────────────────────────────────
-
-export interface KnowledgeSearchRequest {
-  query: string;
-  tenantId?: string;
-  projectId?: string;
-  limit?: number;
-}
-
 export interface KnowledgeSearchResult {
   id: string;
   title: string;
@@ -70,60 +54,6 @@ export interface KnowledgeSearchResponse {
   query: string;
 }
 
-// ─── Agent Context ───────────────────────────────────────────────
-
-export interface AgentContextRequest {
-  task: string;
-  agentType: string;
-  tenantId?: string;
-  projectId?: string;
-  limit?: number;
-  /** Optional extra context key/value pairs. */
-  context?: Record<string, string>;
-}
-
-/** A relevant document chunk returned by the agent. */
-export interface RelevantChunk {
-  content: string;
-  source: string;
-  score?: number;
-}
-
-/** A citation linking to an original source. */
-export interface Citation {
-  title?: string;
-  url?: string;
-  source?: string;
-}
-
-export interface AgentContextResponse {
-  mission: string;
-  relevantDocuments: string[];
-  relevantChunks: RelevantChunk[];
-  citations: Citation[];
-  retrievalSummary?: string;
-  warnings?: string[];
-}
-
-// ─── Ingest URL ──────────────────────────────────────────────────
-
-export interface IngestUrlRequest {
-  url: string;
-  tenantId?: string;
-  projectId?: string;
-  sourceName?: string;
-  visibilityScope?: string;
-  sensitivityLevel?: string;
-  tags?: string[];
-}
-
-export interface IngestUrlResponse {
-  jobId: string;
-  documentId?: string;
-}
-
-// ─── Jobs ────────────────────────────────────────────────────────
-
 export interface JobStatus {
   id: string;
   type: string;
@@ -135,30 +65,117 @@ export interface JobStatus {
   error?: string;
 }
 
-// ─── Document ────────────────────────────────────────────────────
-
-export interface DocumentInfo {
-  id: string;
-  title: string;
-  url?: string;
-  source?: string;
-  status: "processing" | "indexed" | "failed";
-  createdAt: string;
-  metadata?: Record<string, unknown>;
+export interface AgentContextRequest {
+  query: string;
+  context?: Record<string, string>;
 }
 
-// ─── Tenant / Project Context ────────────────────────────────────
+export interface AgentContextResponse {
+  answer: string;
+  sources: string[];
+  confidence: number;
+}
 
-export interface TenantProjectContext {
-  tenantId?: string;
+// ─── New Backend API Types ──────────────────────────────────────
+
+export interface MeResponse {
+  id: string;
+  email: string;
+  name?: string;
+  actorType: "user" | "system" | "agent";
+  createdAt: string;
+}
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  projectCount?: number;
+  memberCount?: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  slug: string;
+  tenantId: string;
+  createdAt: string;
+  description?: string;
+  documentCount?: number;
+}
+
+export interface HiveMindDocument {
+  id: string;
+  title: string;
+  status: "pending" | "processing" | "indexed" | "failed";
+  source: string;
+  type: string;
+  chunksCount: number;
+  createdAt: string;
+  updatedAt: string;
+  visibility: "private" | "tenant" | "public";
+  sensitivity: "low" | "medium" | "high" | "critical";
+  tenantId: string;
   projectId?: string;
-  tenantName?: string;
-  projectName?: string;
+}
+
+export interface DocumentListResponse {
+  documents: HiveMindDocument[];
+  nextCursor?: string;
+  total: number;
+}
+
+export interface HiveMindJob {
+  id: string;
+  jobType: string;
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  stage: string;
+  documentId?: string;
+  progress: number;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+  tenantId: string;
+  projectId?: string;
+}
+
+export interface JobListResponse {
+  jobs: HiveMindJob[];
+  nextCursor?: string;
+  total: number;
+}
+
+export interface AuditLog {
+  id: string;
+  action: string;
+  actorId: string;
+  targetType: string;
+  targetId: string;
+  tenantId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface AuditLogListResponse {
+  logs: AuditLog[];
+  nextCursor?: string;
+  total: number;
+}
+
+export interface DocumentDetailResponse extends HiveMindDocument {
+  chunks?: Array<{
+    id: string;
+    content: string;
+    index: number;
+    indexed: boolean;
+  }>;
 }
 
 // ─── API Client Configuration ────────────────────────────────────
 
 export interface HiveMindClientConfig {
   baseUrl: string;
-  timeout?: number; // ms, default 15000
+  timeout?: number;
 }

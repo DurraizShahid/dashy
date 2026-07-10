@@ -1,148 +1,61 @@
-/**
- * API Proxy for Hive Mind backend.
- *
- * All requests to /api/hive-mind/* are forwarded to the Hive Mind API
- * with the user's Keycloak Bearer token attached server-side.
- *
- * This ensures:
- *  - The access token never reaches the browser
- *  - API keys are never exposed client-side
- *  - CORS is not an issue (same-origin requests)
- *  - 401 responses trigger session invalidation
- *
- * Route pattern:  GET /api/hive-mind/health  →  GET <HIVEMIND>/health
- *                POST /api/hive-mind/api/v1/knowledge/search  →  POST <HIVEMIND>/api/v1/knowledge/search
- */
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionFromRequest } from "@/lib/auth/session";
 
-import { NextResponse } from "next/server";
-import {
-  getSessionPayload,
-  clearSessionCookie,
-  isKeycloakConfigured,
-} from "@/lib/auth/session";
+const BACKEND_BASE =
+  process.env.NEXT_PUBLIC_HIVE_MIND_API_URL?.replace(/\/+$/, "") ?? "";
 
-// ─── Config ──────────────────────────────────────────────────────
-
-function getHiveMindBaseUrl(): string {
-  // Use server-side env var first (private network on Railway), fallback to public
-  return (
-    process.env.HIVEMIND_API_URL ||
-    process.env.NEXT_PUBLIC_HIVEMIND_API_URL ||
-    ""
-  );
-}
-
-// ─── Route Handler ───────────────────────────────────────────────
-
-async function handleRequest(
-  request: Request,
-  { params }: { params: Promise<{ path: string[] }> }
-) {
+async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
-  const pathStr = path.join("/");
+  const backendPath = path.join("/");
+  const search = new URL(request.url).search;
+  const targetUrl = `${BACKEND_BASE}/api/v1/${backendPath}${search}`;
 
-  const baseUrl = getHiveMindBaseUrl();
-  if (!baseUrl) {
-    return NextResponse.json(
-      { error: "Hive Mind API URL is not configured" },
-      { status: 503 }
-    );
-  }
+  const session = await getSessionFromRequest(request);
+  const method = request.method;
 
-  // Construct the target URL
-  const targetUrl = `${baseUrl.replace(/\/+$/, "")}/${pathStr}`;
-
-  // Get auth state
-  const configured = isKeycloakConfigured();
-  const session = await getSessionPayload();
-  const accessToken = session?.accessToken;
-
-  // Check if this endpoint requires auth
-  const isProtectedEndpoint = !pathStr.startsWith("health") && pathStr !== "";
-
-  if (isProtectedEndpoint && configured && !accessToken) {
-    return NextResponse.json(
-      { error: "Authentication required. Please sign in." },
-      { status: 401 }
-    );
-  }
-
-  // Build headers
-  const headers = new Headers();
-  headers.set("Content-Type", "application/json");
-
-  // Attach Bearer token if available
-  if (accessToken) {
-    headers.set("Authorization", `Bearer ${accessToken}`);
-  }
-
-  // Forward method and body
-  const fetchOptions: RequestInit = {
-    method: request.method,
-    headers,
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
   };
 
-  // Forward body for POST/PUT/PATCH
-  if (
-    request.method !== "GET" &&
-    request.method !== "HEAD" &&
-    request.body
-  ) {
-    // Read the body as-is and forward it
-    const bodyText = await request.text();
-    fetchOptions.body = bodyText;
-  } else if (
-    request.method !== "GET" &&
-    request.method !== "HEAD" &&
-    !request.body
-  ) {
-    // Some POST endpoints need an empty body
-    fetchOptions.body = "{}";
+  if (session?.accessToken) {
+    headers["Authorization"] = `Bearer ${session.accessToken}`;
   }
 
+  const body =
+    method !== "GET" && method !== "HEAD"
+      ? await request.text().catch(() => undefined)
+      : undefined;
+
   try {
-    const proxyResponse = await fetch(targetUrl, fetchOptions);
+    const backendResponse = await fetch(targetUrl, {
+      method,
+      headers,
+      body,
+    });
 
-    // Handle 401 — session token may be expired
-    if (proxyResponse.status === 401 && configured) {
-      // Clear session cookie so the client re-authenticates
-      const errorResponse = NextResponse.json(
-        { error: "Session expired. Please sign in again." },
-        { status: 401 }
-      );
-      await clearSessionCookie();
-      return errorResponse;
-    }
+    const responseBody = await backendResponse.text();
+    const responseHeaders: Record<string, string> = {
+      "Content-Type":
+        backendResponse.headers.get("content-type") ?? "application/json",
+    };
 
-    // For non-JSON responses, pass through as text
-    const contentType = proxyResponse.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      const data = await proxyResponse.json();
-      return NextResponse.json(data, { status: proxyResponse.status });
-    } else {
-      const text = await proxyResponse.text();
-      return new NextResponse(text, {
-        status: proxyResponse.status,
-        headers: {
-          "content-type": contentType,
-        },
-      });
-    }
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown error connecting to Hive Mind API";
-    console.error("[hive-mind-proxy] Network error:", message);
+    return new NextResponse(responseBody, {
+      status: backendResponse.status,
+      headers: responseHeaders,
+    });
+  } catch (err) {
     return NextResponse.json(
-      { error: `Hive Mind API unreachable: ${message}` },
+      {
+        error: "Backend unavailable",
+        message: err instanceof Error ? err.message : "Unknown error",
+      },
       { status: 502 }
     );
   }
 }
 
-// ─── Export HTTP method handlers ─────────────────────────────────
-
-export const GET = handleRequest;
-export const POST = handleRequest;
-export const PUT = handleRequest;
-export const PATCH = handleRequest;
-export const DELETE = handleRequest;
+export const GET = handler;
+export const POST = handler;
+export const PUT = handler;
+export const PATCH = handler;
+export const DELETE = handler;

@@ -2,17 +2,14 @@
 
 import { useState } from "react";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
-import { AuthGate } from "@/components/auth/auth-gate";
-import { useHiveMindClient } from "@/lib/hive-mind/provider";
-import { useTenantProject, withContext } from "@/lib/hive-mind/hive-mind-context";
+import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
-import { Search, BookOpen, Loader2, ExternalLink } from "lucide-react";
+import { Search, BookOpen, Loader2, ExternalLink, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { KnowledgeSearchResult } from "@/lib/hive-mind/types";
 
 function KnowledgeSearch() {
-  const { client } = useHiveMindClient();
-  const tenantCtx = useTenantProject();
+  const { client, selectedTenantId, selectedProjectId, selectedTenant } = useHiveMind();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KnowledgeSearchResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -23,16 +20,14 @@ function KnowledgeSearch() {
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const q = query.trim();
-    if (!q || !client) return;
+    if (!q) return;
 
     setLoading(true);
     setError(null);
     setSearched(true);
 
     try {
-      const response = await client.searchKnowledge(
-        withContext({ query: q, limit: 10 }, tenantCtx)
-      );
+      const response = await client!.searchKnowledge(q);
       setResults(response.results);
       setTotal(response.total);
     } catch (err) {
@@ -52,6 +47,22 @@ function KnowledgeSearch() {
 
   return (
     <div className="space-y-4">
+      {/* Scope indicator */}
+      <div className="rounded-[20px] bg-muted/50 p-3">
+        <p className="text-xs text-muted-foreground">
+          <Brain className="size-3 inline mr-1" />
+          Searching scope:{" "}
+          <span className="font-medium text-foreground">
+            {selectedTenant ? selectedTenant.name : "No organization selected"}
+          </span>
+          {selectedProjectId && selectedTenant && (
+            <span className="text-muted-foreground">
+              {" / "}{selectedProjectId.slice(0, 8)}
+            </span>
+          )}
+        </p>
+      </div>
+
       {/* Search Bar */}
       <form onSubmit={handleSearch}>
         <div className="relative">
@@ -60,10 +71,16 @@ function KnowledgeSearch() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search the knowledge base..."
+            placeholder={
+              selectedTenantId
+                ? "Search the knowledge base..."
+                : "Select an organization to search"
+            }
+            disabled={!selectedTenantId}
             className={cn(
               "h-10 w-full rounded-xl border border-input bg-transparent pl-10 pr-4 text-sm transition-colors outline-none",
-              "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+              !selectedTenantId && "opacity-50 cursor-not-allowed"
             )}
           />
         </div>
@@ -158,12 +175,7 @@ export default function HiveMindKnowledgePage() {
       />
 
       <div className="px-6 pb-6 max-w-3xl">
-        <AuthGate
-          title="Knowledge Base"
-          description="Search across all indexed documents, URLs, and ingested content in the Hive Mind knowledge base."
-        >
-          <KnowledgeSearch />
-        </AuthGate>
+        <KnowledgeSearch />
       </div>
     </>
   );

@@ -14,12 +14,14 @@ import {
   BarChart3,
   Settings,
   FileText,
-  Brain,
   ChevronLeft,
   ChevronRight,
   HeartPulse,
   Wifi,
   BookOpen,
+  Upload,
+  FolderArchive,
+  Bot,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -36,12 +38,30 @@ const navItems = [
   { label: "Invoices", icon: FileText, href: "/invoices" },
 ]
 
+const hiveMindItems = [
+  { label: "Overview", icon: LayoutDashboard, href: "/hive-mind" },
+  { label: "Health", icon: HeartPulse, href: "/hive-mind/health" },
+  { label: "Services", icon: Wifi, href: "/hive-mind/services" },
+  { label: "Knowledge", icon: BookOpen, href: "/hive-mind/knowledge" },
+  { label: "Ingest", icon: Upload, href: "/hive-mind/ingest" },
+  { label: "Documents", icon: FolderArchive, href: "/hive-mind/documents" },
+  { label: "Jobs", icon: Activity, href: "/hive-mind/jobs" },
+  { label: "Agents", icon: Bot, href: "/hive-mind/agents" },
+]
+
 interface CRMSidebarProps {
   activeItem: string
 }
 
 export function CRMSidebar({ activeItem }: CRMSidebarProps) {
   const [expanded, setExpanded] = useState(false)
+
+  function isActive(href: string): boolean {
+    const normalized = href.toLowerCase()
+    const current = activeItem.toLowerCase()
+    if (normalized === "/hive-mind" && (current === "hive-mind" || current === "overview")) return true
+    return normalized.endsWith(current) || current === normalized.replace(/^\//, "")
+  }
 
   return (
     <div
@@ -58,10 +78,10 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
         {expanded ? "HelpTribe" : "HT"}
       </div>
 
-      {/* Navigation */}
+      {/* CRM Navigation */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto no-scrollbar">
         {navItems.map((item) => {
-          const isActive = activeItem === item.label.toLowerCase()
+          const itemActive = isActive(item.href)
           return (
             <Link
               key={item.href}
@@ -69,7 +89,7 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
               className={cn(
                 "flex items-center gap-3 rounded-xl text-white transition-colors shrink-0",
                 expanded ? "px-3 py-2.5" : "h-10 w-10 justify-center mx-auto",
-                isActive ? "bg-white/15" : "hover:bg-white/10"
+                itemActive ? "bg-white/15" : "hover:bg-white/10"
               )}
               title={item.label}
             >
@@ -87,65 +107,36 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
           expanded ? "mx-0 mt-2 mb-1" : "mx-2 mt-2 mb-1"
         )} />
 
-        {/* Hive Mind main entry */}
-        <Link
-          href="/hive-mind"
-          className={cn(
-            "flex items-center gap-3 rounded-xl text-white transition-colors shrink-0",
-            expanded ? "px-3 py-2.5" : "h-10 w-10 justify-center mx-auto",
-            activeItem === "hive-mind" ? "bg-white/15" : "hover:bg-white/10"
-          )}
-          title="Hive Mind"
-        >
-          <Brain className="h-5 w-5 shrink-0" />
-          {expanded && (
-            <span className="text-sm font-medium truncate">Hive Mind</span>
-          )}
-        </Link>
+        {/* Hive Mind section label */}
+        {expanded && (
+          <span className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/50">
+            Hive Mind
+          </span>
+        )}
 
-        {/* Hive Mind sub-items */}
-        <Link
-          href="/hive-mind/health"
-          className={cn(
-            "flex items-center gap-3 rounded-xl text-white/80 transition-colors shrink-0",
-            expanded ? "px-3 py-2 pl-8" : "h-10 w-10 justify-center mx-auto",
-            "hover:bg-white/10 hover:text-white"
-          )}
-          title="Health"
-        >
-          <HeartPulse className="h-4 w-4 shrink-0" />
-          {expanded && (
-            <span className="text-xs font-medium truncate">Health</span>
-          )}
-        </Link>
-        <Link
-          href="/hive-mind/services"
-          className={cn(
-            "flex items-center gap-3 rounded-xl text-white/80 transition-colors shrink-0",
-            expanded ? "px-3 py-2 pl-8" : "h-10 w-10 justify-center mx-auto",
-            "hover:bg-white/10 hover:text-white"
-          )}
-          title="Services"
-        >
-          <Wifi className="h-4 w-4 shrink-0" />
-          {expanded && (
-            <span className="text-xs font-medium truncate">Services</span>
-          )}
-        </Link>
-        <Link
-          href="/hive-mind/knowledge"
-          className={cn(
-            "flex items-center gap-3 rounded-xl text-white/80 transition-colors shrink-0",
-            expanded ? "px-3 py-2 pl-8" : "h-10 w-10 justify-center mx-auto",
-            "hover:bg-white/10 hover:text-white"
-          )}
-          title="Knowledge"
-        >
-          <BookOpen className="h-4 w-4 shrink-0" />
-          {expanded && (
-            <span className="text-xs font-medium truncate">Knowledge</span>
-          )}
-        </Link>
+        {/* Hive Mind items */}
+        {hiveMindItems.map((item) => {
+          const itemActive = isActive(item.href)
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-xl transition-colors shrink-0",
+                expanded ? "px-3 py-2.5" : "h-10 w-10 justify-center mx-auto",
+                itemActive
+                  ? "bg-white/15 text-white"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              )}
+              title={item.label}
+            >
+              <item.icon className={cn("shrink-0", expanded ? "h-4 w-4" : "h-5 w-5")} />
+              {expanded && (
+                <span className="text-xs font-medium truncate">{item.label}</span>
+              )}
+            </Link>
+          )
+        })}
       </nav>
 
       {/* Bottom section */}
@@ -163,7 +154,6 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
           {expanded && <span className="text-sm font-medium">Settings</span>}
         </Link>
 
-        {/* Expand/Collapse toggle */}
         <button
           onClick={() => setExpanded(!expanded)}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors"
