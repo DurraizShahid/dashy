@@ -22,6 +22,8 @@ import {
   Upload,
   FolderArchive,
   Bot,
+  Key,
+  ScrollText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -47,6 +49,11 @@ const hiveMindItems = [
   { label: "Documents", icon: FolderArchive, href: "/hive-mind/documents" },
   { label: "Jobs", icon: Activity, href: "/hive-mind/jobs" },
   { label: "Agents", icon: Bot, href: "/hive-mind/agents" },
+]
+
+const adminItems = [
+  { label: "API Keys", icon: Key, href: "/hive-mind/admin/api-keys" },
+  { label: "Audit Logs", icon: ScrollText, href: "/hive-mind/admin/audit-logs" },
 ]
 
 interface CRMSidebarProps {
@@ -116,6 +123,43 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
 
         {/* Hive Mind items */}
         {hiveMindItems.map((item) => {
+          const itemActive = isActive(item.href)
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-xl transition-colors shrink-0",
+                expanded ? "px-3 py-2.5" : "h-10 w-10 justify-center mx-auto",
+                itemActive
+                  ? "bg-white/15 text-white"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              )}
+              title={item.label}
+            >
+              <item.icon className={cn("shrink-0", expanded ? "h-4 w-4" : "h-5 w-5")} />
+              {expanded && (
+                <span className="text-xs font-medium truncate">{item.label}</span>
+              )}
+            </Link>
+          )
+        })}
+
+        {/* Admin section divider */}
+        <div className={cn(
+          "border-t border-white/10",
+          expanded ? "mx-0 mt-2 mb-1" : "mx-2 mt-2 mb-1"
+        )} />
+
+        {/* Admin section label */}
+        {expanded && (
+          <span className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/50">
+            Admin
+          </span>
+        )}
+
+        {/* Admin items */}
+        {adminItems.map((item) => {
           const itemActive = isActive(item.href)
           return (
             <Link

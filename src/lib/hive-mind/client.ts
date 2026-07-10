@@ -15,6 +15,9 @@ import {
   type DocumentDetailResponse,
   type JobListResponse,
   type AuditLogListResponse,
+  type ApiKeyListResponse,
+  type CreateApiKeyResponse,
+  type ApiKey,
 } from "./types";
 import {
   HiveMindApiError,
@@ -198,6 +201,41 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     return request<JobListResponse>(`jobs?${qs}`);
   }
 
+  // ─── API Key Management ────────────────────────────────────
+
+  function listApiKeys(params?: {
+    tenantId?: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const qs = new URLSearchParams();
+    if (params?.tenantId) qs.set("tenantId", params.tenantId);
+    if (params?.status) qs.set("status", params.status);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    return request<ApiKeyListResponse>(`api-keys?${qs}`);
+  }
+
+  function createApiKey(input: {
+    name: string;
+    tenantId?: string;
+    scopes: string[];
+    expiresAt?: string;
+  }) {
+    return request<CreateApiKeyResponse>("api-keys", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  function revokeApiKey(id: string, input?: { reason?: string }) {
+    return request<{ apiKey: ApiKey }>(`api-keys/${encodeURIComponent(id)}/revoke`, {
+      method: "POST",
+      body: input ? JSON.stringify(input) : undefined,
+    });
+  }
+
   function listAuditLogs(params?: {
     tenantId?: string;
     limit?: number;
@@ -236,6 +274,11 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     listDocuments,
     listJobs,
     listAuditLogs,
+
+    // API Keys
+    listApiKeys,
+    createApiKey,
+    revokeApiKey,
 
     // Raw access for one-off endpoints
     request,

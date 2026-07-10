@@ -16,6 +16,9 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
+  RefreshCw,
+  Brain,
+  Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +29,7 @@ export default function HiveMindOverviewPage() {
     projects,
     selectedTenantId,
     selectedTenant,
+    selectedProject,
   } = useHiveMind();
 
   const [health, setHealth] = useState<HealthCheckResponse | null>(null);
@@ -63,6 +67,30 @@ export default function HiveMindOverviewPage() {
       <CRMTopbar title="Hive Mind Overview" subtitle="System overview and quick actions" />
 
       <div className="px-6 pb-6 space-y-4">
+        {/* Scope bar */}
+        <div className="rounded-[20px] bg-muted/50 p-3 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            <Brain className="size-3 inline mr-1" />
+            Scope:{" "}
+            <span className="font-medium text-foreground">
+              {selectedTenant ? selectedTenant.name : "No organization selected"}
+            </span>
+            {selectedProject && (
+              <span className="text-muted-foreground">
+                {" / "}{selectedProject.name}
+              </span>
+            )}
+          </p>
+          <button
+            onClick={fetchOverview}
+            disabled={loading}
+            className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className={cn("size-3", loading && "animate-spin")} />
+          </button>
+        </div>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="rounded-[20px] bg-card p-5 shadow-card">
@@ -175,6 +203,13 @@ export default function HiveMindOverviewPage() {
                 className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
               >
                 View Jobs
+              </Link>
+              <Link
+                href="/hive-mind/admin/api-keys"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+              >
+                <Key className="size-3.5" />
+                Manage API Keys
               </Link>
             </div>
           </div>

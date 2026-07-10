@@ -100,6 +100,14 @@ export default function HiveMindJobsPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="size-4 text-muted-foreground" />
+            <button
+              onClick={() => fetchJobs()}
+              disabled={loading}
+              className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Refresh"
+            >
+              <RefreshCw className={cn("size-3", loading && "animate-spin")} />
+            </button>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

@@ -2,59 +2,58 @@
 
 ## Summary
 
-The Hive Mind API is operational but has no existing integration with the Dashy frontend.
-Several gaps need to be addressed before the frontend can meaningfully interact with protected endpoints.
+The Hive Mind API has multiple gaps that affect the Dashy frontend integration.
+Some have been resolved, others remain.
 
-## Gap 1: No Frontend API URL Configuration
+## Gap 1: No Frontend API URL Configuration ✅ Resolved
 
-**Issue**: Dashy has no `NEXT_PUBLIC_HIVE_MIND_API_URL` env var.
-The Hive Mind API URL is currently hardcoded nowhere — the frontend doesn't know where to find it.
+**Fix**: `NEXT_PUBLIC_HIVE_MIND_API_URL` env var added and validated at runtime (`src/lib/env.ts`).
 
-**Fix**: Add to `.env.example` and validate at runtime (see `src/lib/env.ts`).
+## Gap 2: No Authentication Between Frontend and Backend ✅ Resolved
 
-## Gap 2: No Authentication Between Frontend and Backend
+**Fix**: Keycloak OIDC + PKCE flow implemented. Server-side encrypted HTTP-only session cookie. No browser tokens.
 
-**Issue**: Hive Mind API requires auth for all non-public endpoints.
-Keycloak is deployed on Railway but:
-- No Keycloak client configured for Dashy
-- No OIDC flow implemented in Dashy
-- No token exchange mechanism
+## Gap 3: Hive Mind API May Need CORS Configuration ✅ Resolved
 
-**Fix**: See `AUTH_PLAN.md` for the phased approach.
+**Fix**: All API calls go through `/api/hive-mind/*` server-side proxy. No CORS needed.
 
-## Gap 3: Hive Mind API May Need CORS Configuration
+## Gap 4: No Shared Type Definitions ✅ Partially Resolved
 
-**Issue**: If the frontend runs on a different domain than the API, CORS headers are needed.
-The Hive Mind API should allow `Authorization` header and the Dashy origin.
+**Fix**: Types defined in `src/lib/hive-mind/types.ts`. Based on backend API descriptions, not yet verified against live backend.
 
-**Fix**: Add CORS middleware to Hive Mind API (backend change, not in this repo).
+Remaining: Backend PR #6 types may differ from frontend expectations. Verify against live deployment.
 
-## Gap 4: No Shared Type Definitions
+## Gap 5: No Error Handling / Retry Strategy ✅ Partially Resolved
 
-**Issue**: The Hive Mind API response types are not defined in Dashy.
-All response shapes must be reverse-engineered from the API or documented from the backend repo.
+**Fix**: `HiveMindApiError` and `HiveMindNetworkError` provide basic error handling. Per-page error states for 401/403/404/500.
 
-**Fix**: Create initial types in `src/lib/hive-mind/types.ts` based on public endpoint responses.
+Remaining: No retry strategy, no exponential backoff, no circuit breaker.
 
-## Gap 5: No Error Handling / Retry Strategy
+## Gap 6: No Proxy Configuration ✅ Resolved
 
-**Issue**: No client-side error handling, retry, or circuit-breaking for API calls.
+**Fix**: `/api/hive-mind/[...path]` route handler proxies all methods and attaches Bearer token from session cookie.
 
-**Fix**: The API client (`src/lib/hive-mind/client.ts`) provides a foundation. Future iterations should add:
-- Exponential backoff for transient failures
-- Token refresh on 401
-- Error reporting to monitoring
+## Gap 7: Missing Private Network Configuration ⚠️ Not Started
 
-## Gap 6: No Proxy Configuration
+**Fix**: Document in `RAILWAY_ENV.md` when Railway deployment is configured.
 
-**Issue**: Next.js 16 deprecated `middleware.ts`. For API proxying with auth injection,
-a `proxy.ts` file is needed but doesn't exist yet.
+## Gap 8: API Key Management Endpoints ⚠️ Needs Verification
 
-**Fix**: Add `proxy.ts` when implementing auth (Phase 2 of auth plan).
+**Status**: Backend PR #7 adds `GET/POST /api/v1/api-keys` and `POST /api/v1/api-keys/:id/revoke`.
 
-## Gap 7: Missing Private Network Configuration
+Frontend implements:
+- List, create, revoke flows
+- Plaintext key shown once on creation
+- No localStorage/sessionStorage key persistence
+- Permission-aware (403 handling)
 
-**Issue**: The frontend should communicate with Hive Mind via Railway's private network
-for production traffic. Currently no Railway config or service linking is in place.
+Remaining: Verify against live backend after PR #7 is merged and deployed.
 
-**Fix**: Document in `RAILWAY_ENV.md`.
+## Gap 9: Audit Logs Endpoint ⚠️ Needs Verification
+
+**Status**: `GET /api/v1/audit-logs` endpoint exists but not yet verified against live backend.
+
+Frontend implements:
+- List with cursor-based pagination
+- Tenant filtering
+- Action/target/actor display

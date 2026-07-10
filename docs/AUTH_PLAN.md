@@ -1,54 +1,52 @@
-# Keycloak Frontend Auth Plan
+# Keycloak Frontend Auth — Current State
 
-## Current State
+## Status: Implemented
 
-No authentication exists. The app is fully client-side rendered with no auth middleware, proxy, or token management.
-The Hive Mind API returns 401 for all protected endpoints.
+Keycloak OIDC Authorization Code + PKCE flow is fully implemented.
 
-## Target Architecture
+## Architecture
 
 ```
-Browser ──► Next.js App ──► Hive Mind API
-    │                            │
-    └── Keycloak (OIDC) ────────┘
+Browser ──► Next.js Route Handler (/api/auth/*) ──► Keycloak
+    │                          │
+    │                    /api/hive-mind/* proxy
+    │                          │
+    └── HTTP-only cookie ──────┘── Bearer token ──► Hive Mind API
 ```
 
-## Keycloak Integration
+## Auth Flow
 
-### OIDC Flow
+1. User clicks "Sign In" → redirected to `/api/auth/login`
+2. Login route generates PKCE challenge + verifier cookie, redirects to Keycloak
+3. User authenticates with Keycloak → callback to `/api/auth/callback`
+4. Callback exchanges auth code for tokens, creates encrypted session cookie (`hm_session`), redirects to `/hive-mind`
+5. Session cookie is read by `/api/auth/me` to return session state to client
+6. All `/api/hive-mind/*` requests proxy through server-side handler, which reads session cookie and attaches `Authorization: Bearer` header
 
-1. User visits Dashy → redirected to Keycloak login
-2. Keycloak returns auth code → exchanged for tokens via `proxy.ts`
-3. `proxy.ts` (Next.js 16 middleware replacement) handles token refresh, sets secure cookies
-4. API client reads token from cookie/Auth header
+## Key Design Decisions
 
-### Next.js 16 Notes
+- **Session Encryption**: HS256 JWT signed with `SESSION_ENCRYPTION_KEY` (server-only env var)
+- **No Browser Secrets**: Access tokens, refresh tokens never reach the browser
+- **No localStorage**: Session state is read from `/api/auth/me`, not from localStorage
+- **PKCE**: Verifier stored in server-side cookie (plain method, S256 not required)
+- **Token Refresh**: `/api/auth/refresh` uses refresh token from session cookie to obtain new access tokens
 
-- `middleware.ts` is **deprecated** in Next.js 16. Use `proxy.ts` instead.
-- Proxy runs at the edge layer, before the request reaches the app
-- Good for: token validation, redirect to login, header injection
+## Client-Side Auth Hook
 
-### Implementation Plan
+`useAuth()` in `src/lib/auth/use-auth.ts`:
+- Calls `/api/auth/me` to check session state
+- Returns `isAuthenticated`, `isLoading`, `session`, `login()`, `logout()`
+- Login/logout redirect to server-side handlers
+- No localStorage token access
 
-**Phase 1: Awareness (current PR)**
-- Add `AUTH_ENABLED` env var
-- Create `src/lib/auth/config.ts` with Keycloak configuration constants
-- Add `AuthGate` component that wraps protected sections
-- `/hive-mind/health` page stays public (no auth needed)
+## Permission Handling
 
-**Phase 2: Keycloak Setup**
-- Configure Keycloak realm, client, users on Railway Keycloak instance
-- Set Keycloak env vars (`KEYCLOAK_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`)
-- Add `next-auth` or `@react-oauth2/code-flow` package or custom OIDC client
-- Implement `proxy.ts` for token exchange (Next.js 16 pattern)
+- 401: Session expired — sign in again (layout shows "Authentication Required")
+- 403: Permission denied — specific message per page
+- 404: Not found or inaccessible
+- Backend errors are not exposed as stack traces
 
-**Phase 3: Integration**
-- Wire `proxy.ts` to protect `/api/*` and `/hive-mind/*` routes
-- Inject auth token into Hive Mind API client
-- Add login/logout UI
-- Handle token refresh and silent auth
-
-### Key Env Vars
+## Env Vars Required
 
 | Variable | Description |
 |----------|-------------|
@@ -56,19 +54,11 @@ Browser ──► Next.js App ──► Hive Mind API
 | `NEXT_PUBLIC_KEYCLOAK_REALM` | Keycloak realm name |
 | `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | OIDC client ID |
 | `KEYCLOAK_CLIENT_SECRET` | OIDC client secret (server-only) |
-| `NEXTAUTH_SECRET` | Encryption secret for session cookies |
+| `SESSION_ENCRYPTION_KEY` | Secret for session cookie signing (server-only) |
 
-## Auth Gate Component
+## API Key Management
 
-```typescript
-// Design sketch
-function AuthGate({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
-  if (isLoading) return <Spinner />;
-  if (!isAuthenticated) return fallback ?? <RedirectToLogin />;
-  return children;
-}
-```
-
-First pass: a simple `useAuth()` hook that checks for a `KEYCLOAK_TOKEN` cookie.
-Full implementation deferred until Keycloak is deployed and configured.
+In addition to OIDC auth, the app supports managing Hive Mind API keys:
+- Keys are created, listed, and revoked through the `/api/hive-mind/proxy` — no API key ever reaches the browser
+- Plaintext key is shown once immediately after creation, never persisted in localStorage/sessionStorage
+- Create/revoke flows use the same server-side session for authorization
