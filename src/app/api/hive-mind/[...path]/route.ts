@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionFromRequest } from "@/lib/auth/session";
+import { getSessionFromRequest, encryptSession, getSessionCookieOptions } from "@/lib/auth/session";
+import { getServerAuthConfig } from "@/lib/auth/config";
 
 async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const BACKEND_BASE = (
@@ -29,11 +30,17 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       : undefined;
 
   try {
-    const backendResponse = await fetch(targetUrl, {
-      method,
-      headers,
-      body,
-    });
+    let backendResponse = await fetch(targetUrl, { method, headers, body });
+
+    // Auto-refresh on 401 if we have a refresh token
+    let refreshedSession: { accessToken: string; refreshToken: string } | null = null;
+    if (backendResponse.status === 401 && session?.refreshToken) {
+      refreshedSession = await tryRefreshToken(session.refreshToken);
+      if (refreshedSession) {
+        headers["Authorization"] = `Bearer ${refreshedSession.accessToken}`;
+        backendResponse = await fetch(targetUrl, { method, headers, body });
+      }
+    }
 
     const responseBody = await backendResponse.text();
     const responseHeaders: Record<string, string> = {
@@ -41,10 +48,20 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
         backendResponse.headers.get("content-type") ?? "application/json",
     };
 
-    return new NextResponse(responseBody, {
+    const nextResponse = new NextResponse(responseBody, {
       status: backendResponse.status,
       headers: responseHeaders,
     });
+
+    // Update session cookie if we refreshed
+    if (refreshedSession && session) {
+      const newSession = { ...session, accessToken: refreshedSession.accessToken, refreshToken: refreshedSession.refreshToken };
+      const jwt = await encryptSession(newSession);
+      const cookie = getSessionCookieOptions();
+      nextResponse.cookies.set(cookie.name, jwt, cookie.options);
+    }
+
+    return nextResponse;
   } catch (err) {
     return NextResponse.json(
       {
@@ -54,6 +71,37 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       { status: 502 }
     );
   }
+}
+
+async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string } | null> {
+  const cfg = getServerAuthConfig();
+  if (!cfg.keycloakUrl || !cfg.realm || !cfg.clientId) return null;
+
+  const tokenParams: Record<string, string> = {
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    client_id: cfg.clientId,
+  };
+  if (cfg.clientSecret) {
+    tokenParams.client_secret = cfg.clientSecret;
+  }
+
+  const tokenResponse = await fetch(
+    `${cfg.keycloakUrl}/realms/${cfg.realm}/protocol/openid-connect/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(tokenParams),
+    }
+  );
+
+  if (!tokenResponse.ok) return null;
+
+  const tokens = await tokenResponse.json();
+  return {
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token ?? refreshToken,
+  };
 }
 
 export const GET = handler;
