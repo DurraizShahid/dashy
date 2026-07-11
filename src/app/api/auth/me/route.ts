@@ -1,17 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSessionFromNextRequest } from "@/lib/auth/session";
+import { NextResponse } from "next/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
-export async function GET(request: NextRequest) {
-  const session = await getSessionFromNextRequest(request);
-  if (!session) {
+export async function GET() {
+  const { userId, orgId, orgRole } = await auth();
+  const user = await currentUser();
+
+  if (!userId) {
     return NextResponse.json({ authenticated: false }, { status: 200 });
   }
 
   return NextResponse.json({
     authenticated: true,
-    sub: session.sub,
-    email: session.email ?? null,
-    name: session.name ?? null,
-    preferredUsername: session.preferredUsername ?? null,
+    userId,
+    email: user?.emailAddresses?.[0]?.emailAddress ?? null,
+    name: [user?.firstName, user?.lastName].filter(Boolean).join(" ") || null,
+    orgId: orgId ?? null,
+    orgRole: orgRole ?? null,
   });
 }

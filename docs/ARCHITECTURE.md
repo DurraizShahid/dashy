@@ -79,25 +79,27 @@ New Hive Mind pages follow the same shell pattern for visual consistency.
 1. A shared API client (`@/lib/hive-mind/client`) — all calls go through `/api/hive-mind/*` server proxy
 2. `HiveMindProvider` + `useHiveMind()` context for tenant/project state (`@/lib/hive-mind/hive-mind-context`)
 3. Environment-based configuration (`NEXT_PUBLIC_HIVE_MIND_API_URL`)
-4. Server-side auth via Keycloak OIDC with encrypted HTTP-only session cookies (`src/lib/auth/session.ts`)
+4. Server-side auth via Clerk (`@clerk/nextjs`) with session managed by Clerk SDK
 
 ### Auth Architecture
 
 ```
-Browser ──► Next.js Route Handler (/api/auth/*) ──► Keycloak
-    │                          │
-    │                    /api/hive-mind/* proxy
-    │                          │
-    └── HTTP-only cookie ──────┘── Bearer token ──► Hive Mind API
+Browser (Clerk) ──► /api/hive-mind/* proxy ──► Hive Mind API
+                        │
+                  Clerk auth() + getToken()
+                        │
+                  Authorization: Bearer <clerk session token>
 ```
 
+- Clerk handles sign-in, sign-up, session management
 - No API keys or tokens in browser code
 - No localStorage token storage
 - All Hive Mind API calls go through `/api/hive-mind/[...path]` server-side proxy
-- Proxy reads session cookie and attaches `Authorization: Bearer` header
+- Proxy uses Clerk `auth()` to get userId, then `getToken()` to forward session token
+- No browser API keys
 
 ## Integration Points
 
 - **Hive Mind API**: REST API at `NEXT_PUBLIC_HIVE_MIND_API_URL` (private Railway network), proxied through `/api/hive-mind/*`
-- **Keycloak**: OIDC auth provider (configured via env vars), handles login/callback/logout/refresh
+- **Clerk**: User auth provider (configured via env vars), handles login/signup/session management
 - **Railway**: Deployment platform; service-to-service private networking

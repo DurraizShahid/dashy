@@ -10,7 +10,7 @@ Status as of Dashy RC v1 (`dashy/release-candidate-v1`) with Hive Mind RC PR #8.
 
 ## Gap 2: No Authentication Between Frontend and Backend ✅ Resolved
 
-**Fix**: Keycloak OIDC + PKCE (S256) flow implemented. Server-side encrypted HTTP-only session cookie. No browser tokens. Callback strictly verifies state and PKCE verifier.
+**Fix**: Clerk authentication via `@clerk/nextjs`. Server-side proxy forwards Clerk session tokens. No browser tokens. No API keys exposed.
 
 ## Gap 3: Hive Mind API May Need CORS Configuration ✅ Resolved
 
@@ -30,7 +30,7 @@ Remaining: No retry strategy, no exponential backoff, no circuit breaker.
 
 ## Gap 6: No Proxy Configuration ✅ Resolved
 
-**Fix**: `/api/hive-mind/[...path]` route handler proxies all methods and attaches Bearer token from session cookie.
+**Fix**: `/api/hive-mind/[...path]` route handler proxies all methods and attaches Bearer token from Clerk session via `getToken()`.
 
 ## Gap 7: Missing Private Network Configuration ⚠️ Not Started
 
@@ -42,7 +42,7 @@ Remaining: No retry strategy, no exponential backoff, no circuit breaker.
 - API key list with admin key returns 200 ✅
 - API key management scoped correctly (tenant key gets 403) ✅
 
-**Remaining**: Full browser E2E requires local Keycloak for login flow.
+**Remaining**: Full browser E2E requires Clerk account for login flow.
 
 ## Gap 9: Audit Logs Endpoint ✅ Verified (Phase 4A.6 Audit)
 

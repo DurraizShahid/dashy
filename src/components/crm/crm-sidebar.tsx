@@ -24,10 +24,10 @@ import {
   Bot,
   Key,
   ScrollText,
-  LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth/use-auth"
+import { UserButton } from "@clerk/nextjs"
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
@@ -64,15 +64,7 @@ interface CRMSidebarProps {
 
 export function CRMSidebar({ activeItem }: CRMSidebarProps) {
   const [expanded, setExpanded] = useState(false)
-  const { session, logout } = useAuth()
-
-  const initials = (() => {
-    const name = session?.name || session?.preferredUsername || session?.email || ""
-    if (!name) return "?"
-    const parts = name.split(/[\s.@]+/).filter(Boolean)
-    if (parts.length >= 2) return (parts[0]![0] + parts[1]![0]).toUpperCase()
-    return name.slice(0, 2).toUpperCase()
-  })()
+  useAuth()
 
   function isActive(href: string): boolean {
     const normalized = href.toLowerCase()
@@ -218,19 +210,9 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
         </button>
 
         <div className="flex flex-col items-center gap-2">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-xs font-semibold text-white"
-            title={session?.name || session?.email || "User"}
-          >
-            {initials}
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-xs font-semibold text-white overflow-hidden">
+            <UserButton />
           </div>
-          <button
-            onClick={logout}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-white/60 hover:bg-white/15 hover:text-white transition-colors"
-            title="Log out"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { isAuthEnabled } from "./config";
+import { useAuth as useClerkAuth, useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useCallback } from "react";
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -10,67 +11,47 @@ export interface AuthState {
     sub: string;
     email?: string | null;
     name?: string | null;
-    preferredUsername?: string | null;
+  } | null;
+  user: {
+    name: string | null;
+    email: string | null;
   } | null;
   login: () => void;
   logout: () => void;
 }
 
 export function useAuth(): AuthState {
-  const [session, setSession] = useState<AuthState["session"]>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoaded, isSignedIn, userId, signOut } = useClerkAuth();
+  const { user } = useUser();
+  const router = useRouter();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        const data = await res.json();
-        if (cancelled) return;
-        if (data.authenticated) {
-          setSession({
-            sub: data.sub,
-            email: data.email,
-            name: data.name,
-            preferredUsername: data.preferredUsername,
-          });
-        } else {
-          setSession(null);
-        }
-      } catch {
-        if (!cancelled) {
-          setSession(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+  const session = isLoaded && isSignedIn && userId
+    ? {
+        sub: userId,
+        email: user?.emailAddresses?.[0]?.emailAddress ?? null,
+        name: [user?.firstName, user?.lastName].filter(Boolean).join(" ") || null,
       }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    : null;
 
   const login = useCallback(() => {
-    window.location.href = "/api/auth/login";
-  }, []);
+    router.push("/sign-in");
+  }, [router]);
 
   const logout = useCallback(() => {
-    window.location.href = "/api/auth/logout";
-  }, []);
+    signOut({ redirectUrl: "/" });
+  }, [signOut]);
 
   return {
-    isAuthenticated: session !== null,
-    isLoading,
+    isAuthenticated: !!isSignedIn,
+    isLoading: !isLoaded,
     session,
+    user: session ? { name: session.name, email: session.email } : null,
     login,
     logout,
   };
 }
 
 export function useIsAuthConfigured(): boolean {
-  return isAuthEnabled();
+  // Clerk is always configured when the SDK is installed and ClerkProvider is mounted
+  return true;
 }

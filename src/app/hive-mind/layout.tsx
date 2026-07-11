@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CRMSidebar } from "@/components/crm/crm-sidebar";
 import { TenantProjectSelector } from "@/components/hive-mind/tenant-project-selector";
 import { isHiveMindEnabled } from "@/lib/env";
-import { useAuth, useIsAuthConfigured } from "@/lib/auth/use-auth";
+import { useAuth } from "@/lib/auth/use-auth";
 import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import {
   ShieldAlert,
@@ -42,7 +43,6 @@ export default function HiveMindLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const isConfigured = useIsAuthConfigured();
   const { isAuthenticated, isLoading } = useAuth();
   const { tenants, loading: hmLoading, error: hmError, createTenant, refreshTenants } = useHiveMind();
   const [orgName, setOrgName] = useState("");
@@ -81,7 +81,7 @@ export default function HiveMindLayout({
     );
   }
 
-  // Auth configured but checking session
+  // Checking session
   if (isLoading) {
     return (
       <HiveMindShell>
@@ -93,12 +93,7 @@ export default function HiveMindLayout({
     );
   }
 
-  // Auth not configured — public mode, show everything
-  if (!isConfigured) {
-    return <HiveMindShell>{children}</HiveMindShell>;
-  }
-
-  // Auth configured but not signed in
+  // Not signed in
   if (!isAuthenticated) {
     return (
       <HiveMindShell>
@@ -109,14 +104,14 @@ export default function HiveMindLayout({
               Authentication Required
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Sign in with Keycloak to access Hive Mind features.
+              Sign in to access Hive Mind features.
             </p>
-            <a
-              href="/api/auth/login"
+            <Link
+              href="/sign-in"
               className="inline-flex items-center gap-2 h-9 px-4 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Sign In
-            </a>
+            </Link>
           </div>
         </div>
       </HiveMindShell>

@@ -1,43 +1,57 @@
 /**
- * Next.js 16 Proxy (replaces middleware.ts).
+ * Next.js 16 Proxy — replaces middleware.ts.
  *
- * Currently runs in pass-through mode — all requests proceed normally.
- * When Keycloak auth is deployed, uncomment the auth-check section
- * to protect /hive-mind/* and /api/* routes.
+ * Uses Clerk middleware for authentication.
+ * Public routes are accessible without auth; all others require a signed-in user.
  *
  * Convention: root-level file (or inside src/ next to app/).
  * See: https://nextjs.org/docs/app/api-reference/file-conventions/proxy
  */
 
+import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function proxy(_req: NextRequest): NextResponse {
-  // ─── Security Headers ───────────────────────────────────────────
+function isPublicRoute(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/sign-up") ||
+    pathname.startsWith("/api/health") ||
+    pathname.startsWith("/__clerk")
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function proxy(_request: NextRequest): NextResponse {
   const response = NextResponse.next();
 
+  // Security headers
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
-  // Future: Hive Mind API auth token injection
-  // const token = request.cookies.get("hm_session")?.value;
-  // if (token && pathname.startsWith("/api/hive-mind/")) {
-  //   const url = new URL(pathname.replace("/api/hive-mind", ""), process.env.NEXT_PUBLIC_HIVE_MIND_API_URL);
-  //   return NextResponse.rewrite(url, {
-  //     headers: { Authorization: `Bearer ${token}` },
-  //   });
-  // }
-
-  // Future: Auth-protected route redirect
-  // if (pathname.startsWith("/hive-mind") && !token) {
-  //   return NextResponse.redirect(new URL("/login", request.url));
-  // }
-
   return response;
 }
 
+export default clerkMiddleware(async (auth, request) => {
+  const { pathname } = request.nextUrl;
+
+  // Public routes pass through without auth
+  if (isPublicRoute(pathname)) {
+    return;
+  }
+
+  // Protected routes: require authentication
+  await auth.protect();
+});
+
 // Proxy runs on all routes except static files and Next.js internals
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/(api|trpc)(.*)",
+    "/__clerk/(.*)",
+  ],
 };
