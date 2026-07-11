@@ -2,35 +2,41 @@
 
 ## Current Status
 
-- Dashy is deployed on Railway (`dashy-production-xxxx.up.railway.app`)
-- Hive Mind API is deployed on Railway (`hive-mind-api-production-edd9.up.railway.app`)
-- Keycloak is deployed on Railway (`keycloak-production-15b2.up.railway.app`)
-- No `railway.json` or `nixpacks.toml` config file yet
-- Private networking not yet configured
+- Dashy deployed: `https://dashy-production-4cb5.up.railway.app`
+- Hive Mind API: `http://hivemind-api.railway.internal` (private network)
+- Keycloak: `https://keycloak-production-15b2.up.railway.app`
+- Project: `nervous-system` / Service: `dashy` / Env: `production`
+- Branch: `dashy/release-candidate-v1` (PR #1, auto-deploys)
 
 ## Services
 
 | Service | Purpose | URL |
 |---------|---------|-----|
-| Dashy (this) | Next.js frontend | `dashy-production-xxxx.up.railway.app` |
-| Hive Mind API | Backend API | `hive-mind-api-production-edd9.up.railway.app` |
-| Keycloak | Auth provider | `keycloak-production-15b2.up.railway.app` |
+| Dashy (this) | Next.js frontend | `https://dashy-production-4cb5.up.railway.app` |
+| Hive Mind API | Backend API | `http://hivemind-api.railway.internal` (private) |
+| Keycloak | Auth provider | `https://keycloak-production-15b2.up.railway.app` |
 
-## Required Env Vars
+## Required Env Vars (Production)
 
-### Production (set on Railway dashboard)
+| Variable | Value | Server-only | Notes |
+|----------|-------|:-----------:|-------|
+| `NEXT_PUBLIC_HIVE_MIND_API_URL` | `http://hivemind-api.railway.internal` | No | Private network URL |
+| `NEXT_PUBLIC_KEYCLOAK_URL` | `https://keycloak-production-15b2.up.railway.app` | No | Public Keycloak URL |
+| `NEXT_PUBLIC_KEYCLOAK_REALM` | `hivemind` | No | Keycloak realm |
+| `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | `hivemind-api` | No | PKCE public client |
+| `NEXT_PUBLIC_BASE_URL` | `https://dashy-production-4cb5.up.railway.app` | No | OIDC redirect base |
+| `SESSION_ENCRYPTION_KEY` | *(set via CLI)* | Yes | 32-byte hex for JWT signing |
+| `KEYCLOAK_CLIENT_SECRET` | *(set via CLI)* | Yes | Currently InitialAccessToken — see note below |
 
-| Variable | Source | Notes |
-|----------|--------|-------|
-| `NEXT_PUBLIC_HIVE_MIND_API_URL` | Railway private network or public URL | Must be set for Hive Mind features |
-| `NEXT_PUBLIC_KEYCLOAK_URL` | Keycloak service | Keycloak deployment URL |
-| `NEXT_PUBLIC_KEYCLOAK_REALM` | Keycloak config | e.g. `hivemind` |
-| `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | Keycloak client | e.g. `hivemind-api` |
-| `KEYCLOAK_CLIENT_SECRET` | Keycloak client secret | Server-only, used by `getServerAuthConfig()` |
-| `SESSION_ENCRYPTION_KEY` | Generated | Server-only, used for HM_SESSION JWT signing |
-| `NEXT_PUBLIC_BASE_URL` | This service's public URL | Canonical base URL for OIDC redirects. Falls back to `NEXT_PUBLIC_APP_URL`, then localhost:3000. |
+> **Note on KEYCLOAK_CLIENT_SECRET**: The value currently set is a Keycloak InitialAccessToken JWT, not the standard client secret. For the PKCE public client flow this is fine — token exchange uses `code_verifier` instead. If server-side token refresh is needed later, replace with the actual secret from Keycloak admin → Clients → hivemind-api → Credentials.
 
-### Development
+### Removed
+
+| Variable | Reason |
+|----------|--------|
+| `NEXT_PUBLIC_HIVE_MIND_API_KEY` | Unused in source code — was dead config exposed as NEXT_PUBLIC |
+
+## Development
 
 Add to `.env.local`:
 
@@ -43,20 +49,11 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 SESSION_ENCRYPTION_KEY=<generate a secure random string>
 ```
 
-> **Note**: The Keycloak callback URL must be configured to include your local dev origin (`http://localhost:3000`). Without this, the OIDC flow will fail at the redirect step.
-
-## Private Networking
-
-For production, Dashy should connect to Hive Mind via Railway's private network
-instead of the public URL. This requires both services to be in the same Railway project.
-
-**Steps**:
-1. Verify both Dashy and Hive Mind are in the same Railway project
-2. Enable private networking in the Railway project settings
-3. Set `NEXT_PUBLIC_HIVE_MIND_API_URL` to `http://hive-mind:PORT` (private DNS)
-4. Re-deploy both services
+> The Keycloak redirect URI must include `http://localhost:3000/api/auth/callback` for local dev.
 
 ## Deployment Config
+
+No `railway.json` or `nixpacks.toml` yet — Railway auto-detects Next.js.
 
 Future `railway.json`:
 
@@ -67,7 +64,7 @@ Future `railway.json`:
     "startCommand": "npm start"
   },
   "deploy": {
-    "healthcheckPath": "/health",
+    "healthcheckPath": "/api/auth/me",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
@@ -77,4 +74,4 @@ Future `railway.json`:
 ## Zero-Downtime Deploys
 
 Next.js supports zero-downtime deploys out of the box on Railway.
-No special config needed — Railway handles traffic draining.
+Railway auto-redeploys on env var changes and pushes to the deployed branch.
