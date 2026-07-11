@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthConfig, getBaseUrl } from "@/lib/auth/config";
+import { getServerAuthConfig, getBaseUrl } from "@/lib/auth/config";
 import { encryptSession, getSessionCookieOptions } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
-  const cfg = getAuthConfig();
+  const cfg = getServerAuthConfig();
   if (!cfg.keycloakUrl || !cfg.realm || !cfg.clientId) {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
@@ -32,18 +32,24 @@ export async function GET(request: NextRequest) {
 
   const redirectUri = `${getBaseUrl()}/api/auth/callback`;
 
+  const tokenParams: Record<string, string> = {
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: redirectUri,
+    client_id: cfg.clientId,
+    code_verifier: verifier,
+  };
+
+  if (cfg.clientSecret) {
+    tokenParams.client_secret = cfg.clientSecret;
+  }
+
   const tokenResponse = await fetch(
     `${cfg.keycloakUrl}/realms/${cfg.realm}/protocol/openid-connect/token`,
     {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: redirectUri,
-        client_id: cfg.clientId,
-        code_verifier: verifier,
-      }),
+      body: new URLSearchParams(tokenParams),
     }
   );
 

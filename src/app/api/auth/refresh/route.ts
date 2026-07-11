@@ -4,10 +4,10 @@ import {
   encryptSession,
   getSessionCookieOptions,
 } from "@/lib/auth/session";
-import { getAuthConfig, getBaseUrl } from "@/lib/auth/config";
+import { getServerAuthConfig, getBaseUrl } from "@/lib/auth/config";
 
 export async function POST(request: NextRequest) {
-  const cfg = getAuthConfig();
+  const cfg = getServerAuthConfig();
   if (!cfg.keycloakUrl || !cfg.realm || !cfg.clientId) {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
@@ -17,16 +17,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No refresh token" }, { status: 401 });
   }
 
+  const tokenParams: Record<string, string> = {
+    grant_type: "refresh_token",
+    refresh_token: session.refreshToken,
+    client_id: cfg.clientId,
+  };
+
+  if (cfg.clientSecret) {
+    tokenParams.client_secret = cfg.clientSecret;
+  }
+
   const tokenResponse = await fetch(
     `${cfg.keycloakUrl}/realms/${cfg.realm}/protocol/openid-connect/token`,
     {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: session.refreshToken,
-        client_id: cfg.clientId,
-      }),
+      body: new URLSearchParams(tokenParams),
     }
   );
 
