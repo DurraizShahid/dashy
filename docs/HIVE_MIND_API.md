@@ -25,9 +25,11 @@ Browser fetch(/api/hive-mind/me)
   → Next.js Route Handler
     → Reads `hm_session` HTTP-only cookie
     → Decrypts JWT to get accessToken
-    → Fetches NEXT_PUBLIC_HIVE_MIND_API_URL/api/v1/me with Authorization: Bearer <token>
+    → Fetches HIVE_MIND_API_URL/api/v1/me with Authorization: Bearer <token>
     → Returns response to browser
 ```
+
+> The proxy reads `HIVE_MIND_API_URL` (server-only) first, then falls back to `NEXT_PUBLIC_HIVE_MIND_API_URL`. The backend URL is never exposed to the browser.
 
 ## Auth Flow
 
