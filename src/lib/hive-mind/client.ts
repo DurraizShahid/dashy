@@ -31,6 +31,37 @@ function proxyPath(endpoint: string): string {
   return `/api/hive-mind/${clean}`;
 }
 
+interface KnowledgeSearchOptions {
+  tenantId?: string;
+  projectId?: string;
+  maxResults?: number;
+  minScore?: number;
+}
+
+interface BackendKnowledgeSearchResult {
+  chunkId: string;
+  documentId: string;
+  documentTitle: string;
+  content: string;
+  score: number;
+  sourceUrl?: string;
+}
+
+interface BackendKnowledgeSearchResponse {
+  query: string;
+  results: BackendKnowledgeSearchResult[];
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
 export function createClient(config?: Partial<HiveMindClientConfig>) {
   const timeout = config?.timeout ?? DEFAULT_TIMEOUT;
 
@@ -137,11 +168,30 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     return request<ServiceRegistryEntry[]>("service-registry");
   }
 
-  function searchKnowledge(query: string) {
-    const encoded = encodeURIComponent(query);
-    return request<KnowledgeSearchResponse>(
-      `knowledge/search?q=${encoded}`
+  async function searchKnowledge(
+    query: string,
+    options?: KnowledgeSearchOptions
+  ): Promise<KnowledgeSearchResponse> {
+    const response = await request<BackendKnowledgeSearchResponse>(
+      "knowledge/search",
+      {
+        method: "POST",
+        body: JSON.stringify({ query, ...options }),
+      }
     );
+
+    return {
+      query: response.query,
+      total: response.results.length,
+      results: response.results.map((result) => ({
+        id: result.chunkId,
+        title: result.documentTitle,
+        snippet: result.content,
+        source: result.documentId,
+        relevance: result.score,
+        url: result.sourceUrl,
+      })),
+    };
   }
 
   function ingestUrl(
@@ -150,23 +200,30 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
   ) {
     return request<{ jobId: string; documentId?: string }>("ingest/url", {
       method: "POST",
-      body: JSON.stringify({ url, ...options }),
+      body: JSON.stringify({
+        url,
+        sourceName: options?.source,
+        tenantId: options?.tenantId,
+        projectId: options?.projectId,
+      }),
     });
   }
 
-  function ingestFile(
+  async function ingestFile(
     file: File,
     options?: { source?: string; tenantId?: string; projectId?: string }
   ) {
-    const formData = new FormData();
-    formData.append("file", file);
-    if (options?.source) formData.append("source", options.source);
-    if (options?.tenantId) formData.append("tenantId", options.tenantId);
-    if (options?.projectId) formData.append("projectId", options.projectId);
+    const contentBase64 = await fileToBase64(file);
     return request<{ jobId: string; documentId?: string }>("ingest/file", {
       method: "POST",
-      body: formData,
-      headers: {}, // Let browser set multipart boundary
+      body: JSON.stringify({
+        filename: file.name,
+        contentType: file.type || undefined,
+        contentBase64,
+        sourceName: options?.source,
+        tenantId: options?.tenantId,
+        projectId: options?.projectId,
+      }),
     });
   }
 

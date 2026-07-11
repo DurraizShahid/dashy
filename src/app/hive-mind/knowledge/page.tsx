@@ -27,7 +27,10 @@ function KnowledgeSearch() {
     setSearched(true);
 
     try {
-      const response = await client!.searchKnowledge(q);
+      const response = await client!.searchKnowledge(q, {
+        tenantId: selectedTenantId ?? undefined,
+        projectId: selectedProjectId ?? undefined,
+      });
       setResults(response.results);
       setTotal(response.total);
     } catch (err) {

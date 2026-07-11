@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from "jose";
+import { EncryptJWT, jwtDecrypt } from "jose";
 import type { NextRequest } from "next/server";
 
 const SESSION_COOKIE = "hm_session";
@@ -12,7 +12,7 @@ async function getSecret(): Promise<Uint8Array> {
   if (!raw) {
     throw new Error("SESSION_ENCRYPTION_KEY is not set");
   }
-  // Derive a fixed 32-byte key for HS256 (SHA-256 hash the raw secret)
+  // Derive a fixed 32-byte content encryption key for A256GCM.
   const encoder = new TextEncoder();
   const hash = await crypto.subtle.digest("SHA-256", encoder.encode(raw));
   cachedKey = new Uint8Array(hash);
@@ -30,19 +30,20 @@ export interface SessionPayload {
 }
 
 export async function encryptSession(payload: SessionPayload): Promise<string> {
-  return await new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: "HS256" })
+  return await new EncryptJWT({ ...payload })
+    .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE_SECONDS}s`)
-    .sign(await getSecret());
+    .encrypt(await getSecret());
 }
 
 export async function decryptSession(
   token: string
 ): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, await getSecret(), {
-      algorithms: ["HS256"],
+    const { payload } = await jwtDecrypt(token, await getSecret(), {
+      keyManagementAlgorithms: ["dir"],
+      contentEncryptionAlgorithms: ["A256GCM"],
     });
     return payload as unknown as SessionPayload;
   } catch {

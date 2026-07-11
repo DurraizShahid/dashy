@@ -2,8 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromNextRequest, encryptSession, getSessionCookieOptions } from "@/lib/auth/session";
 import { getServerAuthConfig } from "@/lib/auth/config";
 
-// Module-level lock to prevent concurrent token refreshes
-let refreshPromise: Promise<{ accessToken: string; refreshToken: string } | null> | null = null;
+interface RefreshedTokens {
+  accessToken: string;
+  refreshToken: string;
+  idToken?: string;
+}
+
+const refreshPromises = new Map<string, Promise<RefreshedTokens | null>>();
+
+async function refreshLockKey(refreshToken: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(refreshToken)
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 function makeDeleteCookie(): string {
   const cookie = getSessionCookieOptions();
@@ -41,13 +56,15 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
     let backendResponse = await fetch(targetUrl, { method, headers, body });
 
     // Auto-refresh on 401 if we have a refresh token
-    let refreshedSession: { accessToken: string; refreshToken: string } | null = null;
+    let refreshedSession: RefreshedTokens | null = null;
     if (backendResponse.status === 401 && session?.refreshToken) {
-      // Use the shared refresh lock — if a refresh is already in flight, wait for it
+      const lockKey = await refreshLockKey(session.refreshToken);
+      let refreshPromise = refreshPromises.get(lockKey);
       if (!refreshPromise) {
         refreshPromise = tryRefreshToken(session.refreshToken).finally(() => {
-          refreshPromise = null;
+          refreshPromises.delete(lockKey);
         });
+        refreshPromises.set(lockKey, refreshPromise);
       }
       refreshedSession = await refreshPromise;
 
@@ -79,7 +96,12 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
 
     // Update session cookie if we refreshed
     if (refreshedSession && session) {
-      const newSession = { ...session, accessToken: refreshedSession.accessToken, refreshToken: refreshedSession.refreshToken };
+      const newSession = {
+        ...session,
+        accessToken: refreshedSession.accessToken,
+        refreshToken: refreshedSession.refreshToken,
+        idToken: refreshedSession.idToken ?? session.idToken,
+      };
       const jwt = await encryptSession(newSession);
       const cookie = getSessionCookieOptions();
       nextResponse.cookies.set(cookie.name, jwt, cookie.options);
@@ -97,7 +119,7 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   }
 }
 
-async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string } | null> {
+async function tryRefreshToken(refreshToken: string): Promise<RefreshedTokens | null> {
   const cfg = getServerAuthConfig();
   if (!cfg.keycloakUrl || !cfg.realm || !cfg.clientId) return null;
 
@@ -125,6 +147,7 @@ async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: str
   return {
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token ?? refreshToken,
+    idToken: tokens.id_token,
   };
 }
 

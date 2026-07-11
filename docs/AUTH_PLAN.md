@@ -25,7 +25,7 @@ Browser ──► Next.js Route Handler (/api/auth/*) ──► Keycloak
 
 ## Key Design Decisions
 
-- **Session Encryption**: HS256 JWT signed with `SESSION_ENCRYPTION_KEY` (server-only env var)
+- **Session Encryption**: JWE encrypted with an A256GCM key derived from `SESSION_ENCRYPTION_KEY` (server-only env var)
 - **No Browser Secrets**: Access tokens, refresh tokens never reach the browser
 - **No localStorage**: Session state is read from `/api/auth/me`, not from localStorage
 - **PKCE S256**: Verifier is a 32-byte random base64url string (RFC 7636 compliant); challenge is `base64url(sha256(verifier))`; stored in HTTP-only cookie; callback fails if cookie is missing

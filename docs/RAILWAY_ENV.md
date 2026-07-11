@@ -26,7 +26,7 @@
 | `NEXT_PUBLIC_KEYCLOAK_REALM` | `hivemind` | No | Keycloak realm |
 | `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | `hivemind-api` | No | PKCE public client |
 | `NEXT_PUBLIC_BASE_URL` | `https://dashy-production-4cb5.up.railway.app` | No | OIDC redirect base |
-| `SESSION_ENCRYPTION_KEY` | *(set via CLI)* | Yes | 32-byte hex for JWT signing |
+| `SESSION_ENCRYPTION_KEY` | *(set via CLI)* | Yes | Secret used to derive the hm_session JWE encryption key |
 | `KEYCLOAK_CLIENT_SECRET` | *(set via CLI)* | Yes | RSA private key from Keycloak Credentials tab |
 
 ### Removed
