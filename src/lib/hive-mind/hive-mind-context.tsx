@@ -101,15 +101,16 @@ export function HiveMindProvider({ children }: { children: ReactNode }) {
         client.listTenants(),
       ]);
       setCurrentUser(me);
-      setTenants(tenantList);
+      const safeTenants = Array.isArray(tenantList) ? tenantList : [];
+      setTenants(safeTenants);
 
-      const validTenantIds = new Set(tenantList.map((t) => t.id));
+      const validTenantIds = new Set(safeTenants.map((t) => t.id));
       const stored = loadPreference(STORAGE_TENANT_KEY, validTenantIds);
 
       if (stored && validTenantIds.has(stored)) {
         setSelectedTenantIdState(stored);
-      } else if (tenantList.length === 1) {
-        setSelectedTenantIdState(tenantList[0].id);
+      } else if (safeTenants.length === 1) {
+        setSelectedTenantIdState(safeTenants[0].id);
       } else {
         setSelectedTenantIdState(null);
       }
@@ -132,15 +133,16 @@ export function HiveMindProvider({ children }: { children: ReactNode }) {
       const projectList = await client.listProjects({
         tenantId: selectedTenantId,
       });
-      setProjects(projectList);
+      const safeProjects = Array.isArray(projectList) ? projectList : [];
+      setProjects(safeProjects);
 
-      const validProjectIds = new Set(projectList.map((p) => p.id));
+      const validProjectIds = new Set(safeProjects.map((p) => p.id));
       const stored = loadPreference(STORAGE_PROJECT_KEY, validProjectIds);
 
       if (stored && validProjectIds.has(stored)) {
         setSelectedProjectIdState(stored);
-      } else if (projectList.length === 1) {
-        setSelectedProjectIdState(projectList[0].id);
+      } else if (safeProjects.length === 1) {
+        setSelectedProjectIdState(safeProjects[0].id);
       } else {
         setSelectedProjectIdState(null);
       }

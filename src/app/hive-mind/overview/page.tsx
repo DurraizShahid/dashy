@@ -51,8 +51,8 @@ export default function HiveMindOverviewPage() {
           : Promise.resolve(null),
       ]);
       if (h) setHealth(h);
-      if (docs) setRecentDocs(docs.documents);
-      if (jobs) setRecentJobs(jobs.jobs);
+      if (docs) setRecentDocs(Array.isArray(docs.documents) ? docs.documents : []);
+      if (jobs) setRecentJobs(Array.isArray(jobs.jobs) ? jobs.jobs : []);
     } finally {
       setLoading(false);
     }
