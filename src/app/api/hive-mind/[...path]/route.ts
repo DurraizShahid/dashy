@@ -1,28 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromNextRequest, encryptSession, getSessionCookieOptions } from "@/lib/auth/session";
-import { getServerAuthConfig } from "@/lib/auth/config";
-
-interface RefreshedTokens {
-  accessToken: string;
-  refreshToken: string;
-  idToken?: string;
-}
+import { refreshToken, makeDeleteSessionCookie, type RefreshedTokens } from "@/lib/auth/refresh";
 
 const refreshPromises = new Map<string, Promise<RefreshedTokens | null>>();
 
-async function refreshLockKey(refreshToken: string): Promise<string> {
+async function refreshLockKey(token: string): Promise<string> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(refreshToken)
+    new TextEncoder().encode(token)
   );
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
-}
-
-function makeDeleteCookie(): string {
-  const cookie = getSessionCookieOptions();
-  return `${cookie.name}=; Path=${cookie.options.path}; HttpOnly; SameSite=${cookie.options.sameSite}; Max-Age=0${cookie.options.secure ? "; Secure" : ""}`;
 }
 
 async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
@@ -55,13 +44,12 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   try {
     let backendResponse = await fetch(targetUrl, { method, headers, body });
 
-    // Auto-refresh on 401 if we have a refresh token
     let refreshedSession: RefreshedTokens | null = null;
     if (backendResponse.status === 401 && session?.refreshToken) {
       const lockKey = await refreshLockKey(session.refreshToken);
       let refreshPromise = refreshPromises.get(lockKey);
       if (!refreshPromise) {
-        refreshPromise = tryRefreshToken(session.refreshToken).finally(() => {
+        refreshPromise = refreshToken(session.refreshToken).finally(() => {
           refreshPromises.delete(lockKey);
         });
         refreshPromises.set(lockKey, refreshPromise);
@@ -72,8 +60,7 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
         headers["Authorization"] = `Bearer ${refreshedSession.accessToken}`;
         backendResponse = await fetch(targetUrl, { method, headers, body });
       } else {
-        // Refresh failed — clear session and signal expiry to client
-        const deleteCookie = makeDeleteCookie();
+        const deleteCookie = makeDeleteSessionCookie();
         const respHeaders = new Headers();
         respHeaders.append("Set-Cookie", deleteCookie);
         return NextResponse.json(
@@ -94,7 +81,6 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       headers: responseHeaders,
     });
 
-    // Update session cookie if we refreshed
     if (refreshedSession && session) {
       const newSession = {
         ...session,
@@ -117,38 +103,6 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       { status: 502 }
     );
   }
-}
-
-async function tryRefreshToken(refreshToken: string): Promise<RefreshedTokens | null> {
-  const cfg = getServerAuthConfig();
-  if (!cfg.keycloakUrl || !cfg.realm || !cfg.clientId) return null;
-
-  const tokenParams: Record<string, string> = {
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
-    client_id: cfg.clientId,
-  };
-  if (cfg.clientSecret) {
-    tokenParams.client_secret = cfg.clientSecret;
-  }
-
-  const tokenResponse = await fetch(
-    `${cfg.keycloakUrl}/realms/${cfg.realm}/protocol/openid-connect/token`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(tokenParams),
-    }
-  );
-
-  if (!tokenResponse.ok) return null;
-
-  const tokens = await tokenResponse.json();
-  return {
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token ?? refreshToken,
-    idToken: tokens.id_token,
-  };
 }
 
 export const GET = handler;

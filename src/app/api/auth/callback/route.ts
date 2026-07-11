@@ -57,8 +57,13 @@ export async function GET(request: NextRequest) {
 
   if (!tokenResponse.ok) {
     const body = await tokenResponse.text();
+    console.error("Token exchange failed", {
+      status: tokenResponse.status,
+      statusText: tokenResponse.statusText,
+      bodyLength: body.length,
+    });
     return NextResponse.json(
-      { error: `Token exchange failed: ${body}` },
+      { error: "Token exchange failed" },
       { status: 502 }
     );
   }
@@ -84,8 +89,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing ID token" }, { status: 502 });
   }
 
-  // Validate nonce if it was provided in the original auth request
-  if (expectedNonce && idTokenPayload.nonce && idTokenPayload.nonce !== expectedNonce) {
+  // Validate nonce strictly
+  if (!expectedNonce) {
+    return NextResponse.json({ error: "Missing nonce cookie" }, { status: 400 });
+  }
+
+  if (!idTokenPayload.nonce) {
+    return NextResponse.json({ error: "Missing nonce claim" }, { status: 400 });
+  }
+
+  if (idTokenPayload.nonce !== expectedNonce) {
     return NextResponse.json({ error: "Nonce mismatch" }, { status: 400 });
   }
 
@@ -102,14 +115,10 @@ export async function GET(request: NextRequest) {
   const jwt = await encryptSession(sessionPayload);
   const cookie = getSessionCookieOptions();
 
-  const cookieOpts = cookie.options;
-  const cookieStr = `${cookie.name}=${jwt}; Path=${cookieOpts.path}; HttpOnly; SameSite=${cookieOpts.sameSite}; Max-Age=${cookieOpts.maxAge}${cookieOpts.secure ? "; Secure" : ""}`;
-  const headers = new Headers();
-  headers.set("Location", `${getBaseUrl()}/hive-mind`);
-  headers.append("Set-Cookie", cookieStr);
-  headers.append("Set-Cookie", `pkce_verifier=; Path=/; HttpOnly; Max-Age=0`);
-  headers.append("Set-Cookie", `oauth_state=; Path=/; HttpOnly; Max-Age=0`);
-  headers.append("Set-Cookie", `oauth_nonce=; Path=/; HttpOnly; Max-Age=0`);
-
-  return new Response(null, { status: 302, headers });
+  const response = NextResponse.redirect(`${getBaseUrl()}/hive-mind`);
+  response.cookies.set(cookie.name, jwt, cookie.options);
+  response.cookies.delete("pkce_verifier");
+  response.cookies.delete("oauth_state");
+  response.cookies.delete("oauth_nonce");
+  return response;
 }
