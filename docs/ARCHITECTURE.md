@@ -31,7 +31,7 @@ src/
 │   ├── globals.css         # Global styles, CSS variables, theme
 │   ├── (pages)/            # Placeholder for route-group layouts
 │   ├── api/                # API routes (Next.js Route Handlers)
-│   ├── auth/               # Auth endpoints (login, callback, logout, refresh, me)
+│   ├── auth/me             # GET /api/auth/me — returns current Clerk user
 │   └── hive-mind/[...path] # Proxy to Hive Mind backend API
 ├── hive-mind/          # Hive Mind module
 │   ├── layout.tsx         # Auth-aware shell with sidebar + tenant/project selectors

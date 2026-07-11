@@ -23,23 +23,21 @@ All requests go through a server-side route handler at `src/app/api/hive-mind/[.
 ```
 Browser fetch(/api/hive-mind/me)
   → Next.js Route Handler
-    → Reads `hm_session` HTTP-only cookie
-    → Decrypts JWT to get accessToken
+    → Calls Clerk auth() to get userId + getToken()
     → Fetches HIVE_MIND_API_URL/api/v1/me with Authorization: Bearer <token>
     → Returns response to browser
 ```
 
-> The proxy reads `HIVE_MIND_API_URL` (server-only) first, then falls back to `NEXT_PUBLIC_HIVE_MIND_API_URL`. The backend URL is never exposed to the browser.
+> The proxy reads `HIVE_MIND_API_URL` (server-only). The backend URL is never exposed to the browser.
 
 ## Auth Flow
 
 - Client never has access to access tokens
-- Session is encrypted in an HTTP-only cookie (`hm_session`)
-- Proxy decrypts the session and attaches Bearer token server-side
+- Clerk manages session tokens via `@clerk/nextjs`
+- Proxy calls `auth().getToken()` to attach Bearer token server-side
 - No X-API-Key in browser code
 - No localStorage token storage
-- PKCE uses S256 challenge method (SHA-256 hash)
-- Callback fails if PKCE verifier or oauth_state cookie is missing
+- 401 from backend triggers redirect to `/sign-in`
 
 ## Endpoints
 
@@ -79,10 +77,9 @@ All methods are accessed through the client object returned by `createClient()`.
 | Property | Status |
 |----------|--------|
 | Browser has access to bearer token | ❌ No (server-side only) |
-| Browser has access to refresh token | ❌ No (server-side only) |
+| Browser has access to refresh token | ❌ No (Clerk-managed) |
 | localStorage contains auth tokens | ❌ No (only tenant/project preferences) |
 | X-API-Key used in browser code | ❌ No |
-| Plaintext API key persisted in browser | ❌ No (shown once, cleared on close) |
-| PKCE uses S256 challenge | ✅ Yes |
-| Callback fails without verifier | ✅ Yes |
-| State verified strictly | ✅ Yes |
+| Plaintext API key persisted in browser | ❌ No |
+| Auth managed by Clerk | ✅ Yes |
+| 401 triggers re-authentication | ✅ Yes |
