@@ -94,7 +94,10 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
   // ─── Tenants & Projects ──────────────────────────────────────
 
   async function listTenants() {
-    return request<Tenant[]>("tenants");
+    const result = await request<Record<string, unknown>>("tenants");
+    if (Array.isArray(result)) return result as Tenant[];
+    if (result && typeof result === "object" && Array.isArray(result.tenants)) return result.tenants as Tenant[];
+    return [];
   }
 
   async function createTenant(input: { name: string }) {
@@ -108,7 +111,10 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     const qs = params?.tenantId
       ? `?tenantId=${encodeURIComponent(params.tenantId)}`
       : "";
-    return request<Project[]>(`projects${qs}`);
+    const result = await request<Record<string, unknown>>(`projects${qs}`);
+    if (Array.isArray(result)) return result as Project[];
+    if (result && typeof result === "object" && Array.isArray(result.projects)) return result.projects as Project[];
+    return [];
   }
 
   // ─── Public Endpoints ────────────────────────────────────────
