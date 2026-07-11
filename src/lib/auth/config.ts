@@ -46,12 +46,22 @@ export function isAuthEnabled(): boolean {
 
 /**
  * Canonical base URL for redirects.
- * Priority: NEXT_PUBLIC_BASE_URL > NEXT_PUBLIC_APP_URL > localhost:3000
+ * Priority: NEXT_PUBLIC_BASE_URL > NEXT_PUBLIC_APP_URL
+ * In production, throws if neither is set (avoids silent localhost redirects).
  */
 export function getBaseUrl(): string {
-  return (
+  const url =
     process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "http://localhost:3000"
-  );
+    process.env.NEXT_PUBLIC_APP_URL;
+
+  if (!url) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "NEXT_PUBLIC_BASE_URL or NEXT_PUBLIC_APP_URL must be set in production"
+      );
+    }
+    return "http://localhost:3000";
+  }
+
+  return url.replace(/\/+$/, "");
 }

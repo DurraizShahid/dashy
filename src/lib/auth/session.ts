@@ -4,12 +4,19 @@ import type { NextRequest } from "next/server";
 const SESSION_COOKIE = "hm_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24; // 24h
 
-function getSecret(): Uint8Array {
+let cachedKey: Uint8Array | null = null;
+
+async function getSecret(): Promise<Uint8Array> {
+  if (cachedKey) return cachedKey;
   const raw = process.env.SESSION_ENCRYPTION_KEY;
   if (!raw) {
     throw new Error("SESSION_ENCRYPTION_KEY is not set");
   }
-  return new TextEncoder().encode(raw);
+  // Derive a fixed 32-byte key for HS256 (SHA-256 hash the raw secret)
+  const encoder = new TextEncoder();
+  const hash = await crypto.subtle.digest("SHA-256", encoder.encode(raw));
+  cachedKey = new Uint8Array(hash);
+  return cachedKey;
 }
 
 export interface SessionPayload {
@@ -27,14 +34,14 @@ export async function encryptSession(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE_SECONDS}s`)
-    .sign(getSecret());
+    .sign(await getSecret());
 }
 
 export async function decryptSession(
   token: string
 ): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, getSecret(), {
+    const { payload } = await jwtVerify(token, await getSecret(), {
       algorithms: ["HS256"],
     });
     return payload as unknown as SessionPayload;

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { getServerAuthConfig, getBaseUrl } from "@/lib/auth/config";
 import { encryptSession, getSessionCookieOptions } from "@/lib/auth/session";
 
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing PKCE verifier cookie" }, { status: 400 });
   }
 
+  const expectedNonce = request.cookies.get("oauth_nonce")?.value;
   const redirectUri = `${getBaseUrl()}/api/auth/callback`;
 
   const tokenParams: Record<string, string> = {
@@ -62,21 +64,40 @@ export async function GET(request: NextRequest) {
   }
 
   const tokens = await tokenResponse.json();
-  const idToken = tokens.id_token
-    ? JSON.parse(
-        Buffer.from(tokens.id_token.split(".")[1], "base64").toString()
-      )
-    : {};
+
+  // Verify the ID token signature and validate claims
+  let idTokenPayload: Record<string, unknown> = {};
+  if (tokens.id_token) {
+    try {
+      const JWKS = createRemoteJWKSet(
+        new URL(`${cfg.keycloakUrl}/realms/${cfg.realm}/protocol/openid-connect/certs`)
+      );
+      const { payload } = await jwtVerify(tokens.id_token, JWKS, {
+        audience: cfg.clientId,
+        issuer: `${cfg.keycloakUrl}/realms/${cfg.realm}`,
+      });
+      idTokenPayload = payload as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: "ID token verification failed" }, { status: 502 });
+    }
+  } else {
+    return NextResponse.json({ error: "Missing ID token" }, { status: 502 });
+  }
+
+  // Validate nonce if it was provided in the original auth request
+  if (expectedNonce && idTokenPayload.nonce && idTokenPayload.nonce !== expectedNonce) {
+    return NextResponse.json({ error: "Nonce mismatch" }, { status: 400 });
+  }
 
   const sessionPayload = {
-    sub: idToken.sub ?? tokens.access_token,
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token,
-    idToken: tokens.id_token,
-    email: idToken.email,
-    name: idToken.name,
-    preferredUsername: idToken.preferred_username,
-  };
+    sub: String(idTokenPayload.sub ?? tokens.access_token),
+    accessToken: tokens.access_token as string,
+    refreshToken: tokens.refresh_token as string | undefined,
+    idToken: tokens.id_token as string | undefined,
+    email: typeof idTokenPayload.email === "string" ? idTokenPayload.email : undefined,
+    name: typeof idTokenPayload.name === "string" ? idTokenPayload.name : undefined,
+    preferredUsername: typeof idTokenPayload.preferred_username === "string" ? idTokenPayload.preferred_username : undefined,
+  } satisfies import("@/lib/auth/session").SessionPayload;
 
   const jwt = await encryptSession(sessionPayload);
   const cookie = getSessionCookieOptions();
@@ -88,6 +109,7 @@ export async function GET(request: NextRequest) {
   headers.append("Set-Cookie", cookieStr);
   headers.append("Set-Cookie", `pkce_verifier=; Path=/; HttpOnly; Max-Age=0`);
   headers.append("Set-Cookie", `oauth_state=; Path=/; HttpOnly; Max-Age=0`);
+  headers.append("Set-Cookie", `oauth_nonce=; Path=/; HttpOnly; Max-Age=0`);
 
   return new Response(null, { status: 302, headers });
 }

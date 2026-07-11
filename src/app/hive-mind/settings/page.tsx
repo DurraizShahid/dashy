@@ -124,8 +124,12 @@ export default function HiveMindSettingsPage() {
               value={currentUser?.email ?? session?.email ?? (isAuthenticated ? "Yes" : "No")}
               ok={isAuthenticated}
             />
-            {currentUser?.name && (
-              <InfoRow label="Name" value={currentUser.name} ok={true} />
+            {(currentUser?.name || session?.name) && (
+              <InfoRow
+                label="Name"
+                value={currentUser?.name || session?.name || ""}
+                ok={true}
+              />
             )}
             {currentUser?.actorType && (
               <InfoRow label="Actor Type" value={currentUser.actorType} ok={true} />

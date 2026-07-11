@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromNextRequest, encryptSession, getSessionCookieOptions } from "@/lib/auth/session";
 import { getServerAuthConfig } from "@/lib/auth/config";
 
+// Module-level lock to prevent concurrent token refreshes
+let refreshPromise: Promise<{ accessToken: string; refreshToken: string } | null> | null = null;
+
+function makeDeleteCookie(): string {
+  const cookie = getSessionCookieOptions();
+  return `${cookie.name}=; Path=${cookie.options.path}; HttpOnly; SameSite=${cookie.options.sameSite}; Max-Age=0${cookie.options.secure ? "; Secure" : ""}`;
+}
+
 async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const BACKEND_BASE = (
     process.env.HIVE_MIND_API_URL ||
@@ -35,10 +43,26 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
     // Auto-refresh on 401 if we have a refresh token
     let refreshedSession: { accessToken: string; refreshToken: string } | null = null;
     if (backendResponse.status === 401 && session?.refreshToken) {
-      refreshedSession = await tryRefreshToken(session.refreshToken);
+      // Use the shared refresh lock — if a refresh is already in flight, wait for it
+      if (!refreshPromise) {
+        refreshPromise = tryRefreshToken(session.refreshToken).finally(() => {
+          refreshPromise = null;
+        });
+      }
+      refreshedSession = await refreshPromise;
+
       if (refreshedSession) {
         headers["Authorization"] = `Bearer ${refreshedSession.accessToken}`;
         backendResponse = await fetch(targetUrl, { method, headers, body });
+      } else {
+        // Refresh failed — clear session and signal expiry to client
+        const deleteCookie = makeDeleteCookie();
+        const respHeaders = new Headers();
+        respHeaders.append("Set-Cookie", deleteCookie);
+        return NextResponse.json(
+          { code: "SESSION_EXPIRED", message: "Session expired, please log in again" },
+          { status: 401, headers: respHeaders }
+        );
       }
     }
 

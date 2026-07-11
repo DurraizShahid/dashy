@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { createClient, type HiveMindClient } from "./client";
+import { HiveMindApiError } from "./errors";
 import type {
   MeResponse,
   Tenant,
@@ -117,6 +118,10 @@ export function HiveMindProvider({ children }: { children: ReactNode }) {
         setSelectedTenantIdState(null);
       }
     } catch (err) {
+      if (err instanceof HiveMindApiError && err.code === "SESSION_EXPIRED") {
+        window.location.href = "/api/auth/logout";
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to load tenants");
       setCurrentUser(null);
       setTenants([]);

@@ -123,6 +123,19 @@ export default function HiveMindLayout({
     );
   }
 
+  // Authenticated, error loading tenants
+  if (hmError && tenants.length === 0) {
+    return (
+      <HiveMindShell>
+        <div className="flex items-center justify-center py-16">
+          <div className="rounded-[20px] bg-card p-6 shadow-card max-w-md text-center">
+            <p className="text-sm text-destructive">{hmError}</p>
+          </div>
+        </div>
+      </HiveMindShell>
+    );
+  }
+
   // Authenticated, loading tenants
   if (hmLoading && tenants.length === 0) {
     return (
@@ -188,19 +201,6 @@ export default function HiveMindLayout({
                 )}
               </button>
             </form>
-          </div>
-        </div>
-      </HiveMindShell>
-    );
-  }
-
-  // Authenticated, error loading tenants
-  if (hmError && tenants.length === 0) {
-    return (
-      <HiveMindShell>
-        <div className="flex items-center justify-center py-16">
-          <div className="rounded-[20px] bg-card p-6 shadow-card max-w-md text-center">
-            <p className="text-sm text-destructive">{hmError}</p>
           </div>
         </div>
       </HiveMindShell>

@@ -60,6 +60,13 @@ export async function GET() {
     path: "/",
     maxAge: 300,
   });
+  response.cookies.set("oauth_nonce", nonce, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 300,
+  });
 
   return response;
 }
