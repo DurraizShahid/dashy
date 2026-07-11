@@ -36,6 +36,8 @@ Browser fetch(/api/hive-mind/me)
 - Proxy decrypts the session and attaches Bearer token server-side
 - No X-API-Key in browser code
 - No localStorage token storage
+- PKCE uses S256 challenge method (SHA-256 hash)
+- Callback fails if PKCE verifier or oauth_state cookie is missing
 
 ## Endpoints
 
@@ -79,3 +81,6 @@ All methods are accessed through the client object returned by `createClient()`.
 | localStorage contains auth tokens | ❌ No (only tenant/project preferences) |
 | X-API-Key used in browser code | ❌ No |
 | Plaintext API key persisted in browser | ❌ No (shown once, cleared on close) |
+| PKCE uses S256 challenge | ✅ Yes |
+| Callback fails without verifier | ✅ Yes |
+| State verified strictly | ✅ Yes |

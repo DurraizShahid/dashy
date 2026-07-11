@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthConfig } from "@/lib/auth/config";
+import { getAuthConfig, getBaseUrl } from "@/lib/auth/config";
 import { encryptSession, getSessionCookieOptions } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
@@ -21,12 +21,16 @@ export async function GET(request: NextRequest) {
   }
 
   const savedState = request.cookies.get("oauth_state")?.value;
-  if (state && savedState && state !== savedState) {
-    return NextResponse.json({ error: "State mismatch" }, { status: 400 });
+  if (!savedState || !state || state !== savedState) {
+    return NextResponse.json({ error: "State mismatch or missing" }, { status: 400 });
   }
 
   const verifier = request.cookies.get("pkce_verifier")?.value;
-  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/auth/callback`;
+  if (!verifier) {
+    return NextResponse.json({ error: "Missing PKCE verifier cookie" }, { status: 400 });
+  }
+
+  const redirectUri = `${getBaseUrl()}/api/auth/callback`;
 
   const tokenResponse = await fetch(
     `${cfg.keycloakUrl}/realms/${cfg.realm}/protocol/openid-connect/token`,
@@ -38,7 +42,7 @@ export async function GET(request: NextRequest) {
         code,
         redirect_uri: redirectUri,
         client_id: cfg.clientId,
-        code_verifier: verifier ?? code,
+        code_verifier: verifier,
       }),
     }
   );
@@ -70,9 +74,7 @@ export async function GET(request: NextRequest) {
   const jwt = await encryptSession(sessionPayload);
   const cookie = getSessionCookieOptions();
 
-  const response = NextResponse.redirect(
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/hive-mind`
-  );
+  const response = NextResponse.redirect(`${getBaseUrl()}/hive-mind`);
 
   response.cookies.set(cookie.name, jwt, cookie.options);
   response.cookies.delete("pkce_verifier");

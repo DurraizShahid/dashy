@@ -4,7 +4,7 @@ import {
   encryptSession,
   getSessionCookieOptions,
 } from "@/lib/auth/session";
-import { getAuthConfig } from "@/lib/auth/config";
+import { getAuthConfig, getBaseUrl } from "@/lib/auth/config";
 
 export async function POST(request: NextRequest) {
   const cfg = getAuthConfig();
@@ -31,9 +31,7 @@ export async function POST(request: NextRequest) {
   );
 
   if (!tokenResponse.ok) {
-    const response = NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/auth/login`
-    );
+    const response = NextResponse.redirect(`${getBaseUrl()}/api/auth/login`);
     const cookie = getSessionCookieOptions();
     response.cookies.set(cookie.name, "", { ...cookie.options, maxAge: 0 });
     return response;

@@ -1,5 +1,23 @@
 import { NextResponse } from "next/server";
-import { getAuthConfig } from "@/lib/auth/config";
+import { getAuthConfig, getBaseUrl } from "@/lib/auth/config";
+
+function base64urlEncode(buffer: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...buffer));
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return base64urlEncode(array);
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return base64urlEncode(new Uint8Array(digest));
+}
 
 export async function GET() {
   const cfg = getAuthConfig();
@@ -7,10 +25,11 @@ export async function GET() {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/auth/callback`;
+  const redirectUri = `${getBaseUrl()}/api/auth/callback`;
   const state = crypto.randomUUID();
   const nonce = crypto.randomUUID();
-  const verifier = crypto.randomUUID();
+  const verifier = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
 
   const params = new URLSearchParams({
     client_id: cfg.clientId,
@@ -19,8 +38,8 @@ export async function GET() {
     scope: "openid profile email",
     state,
     nonce,
-    code_challenge: verifier,
-    code_challenge_method: "plain",
+    code_challenge: challenge,
+    code_challenge_method: "S256",
   });
 
   const response = NextResponse.redirect(

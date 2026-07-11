@@ -20,30 +20,39 @@ export function useAuth(): AuthState {
   const [session, setSession] = useState<AuthState["session"]>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkSession = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      const data = await res.json();
-      if (data.authenticated) {
-        setSession({
-          sub: data.sub,
-          email: data.email,
-          name: data.name,
-          preferredUsername: data.preferredUsername,
-        });
-      } else {
-        setSession(null);
-      }
-    } catch {
-      setSession(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.authenticated) {
+          setSession({
+            sub: data.sub,
+            email: data.email,
+            name: data.name,
+            preferredUsername: data.preferredUsername,
+          });
+        } else {
+          setSession(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setSession(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const login = useCallback(() => {
     window.location.href = "/api/auth/login";
@@ -63,6 +72,5 @@ export function useAuth(): AuthState {
 }
 
 export function useIsAuthConfigured(): boolean {
-  const [configured] = useState(isAuthEnabled);
-  return configured;
+  return isAuthEnabled();
 }

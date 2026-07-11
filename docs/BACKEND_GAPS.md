@@ -10,7 +10,7 @@ Status as of Dashy RC v1 (`dashy/release-candidate-v1`) with Hive Mind RC PR #8.
 
 ## Gap 2: No Authentication Between Frontend and Backend ✅ Resolved
 
-**Fix**: Keycloak OIDC + PKCE flow implemented. Server-side encrypted HTTP-only session cookie. No browser tokens.
+**Fix**: Keycloak OIDC + PKCE (S256) flow implemented. Server-side encrypted HTTP-only session cookie. No browser tokens. Callback strictly verifies state and PKCE verifier.
 
 ## Gap 3: Hive Mind API May Need CORS Configuration ✅ Resolved
 

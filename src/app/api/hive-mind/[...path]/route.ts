@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth/session";
 
-const BACKEND_BASE =
-  process.env.NEXT_PUBLIC_HIVE_MIND_API_URL?.replace(/\/+$/, "") ?? "";
-
 async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const BACKEND_BASE =
+    process.env.NEXT_PUBLIC_HIVE_MIND_API_URL?.replace(/\/+$/, "") ?? "";
   const { path } = await params;
   const backendPath = path.join("/");
   const search = new URL(request.url).search;

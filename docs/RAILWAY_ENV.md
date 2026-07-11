@@ -26,8 +26,9 @@
 | `NEXT_PUBLIC_KEYCLOAK_URL` | Keycloak service | Keycloak deployment URL |
 | `NEXT_PUBLIC_KEYCLOAK_REALM` | Keycloak config | e.g. `hivemind` |
 | `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | Keycloak client | e.g. `hivemind-api` |
-| `KEYCLOAK_CLIENT_SECRET` | Keycloak client secret | Server-only |
+| `KEYCLOAK_CLIENT_SECRET` | Keycloak client secret | Server-only, used by `getServerAuthConfig()` |
 | `SESSION_ENCRYPTION_KEY` | Generated | Server-only, used for HM_SESSION JWT signing |
+| `NEXT_PUBLIC_BASE_URL` | This service's public URL | Canonical base URL for OIDC redirects. Falls back to `NEXT_PUBLIC_APP_URL`, then localhost:3000. |
 
 ### Development
 
@@ -38,6 +39,7 @@ NEXT_PUBLIC_HIVE_MIND_API_URL=https://hivemind-api-production-edd9.up.railway.ap
 NEXT_PUBLIC_KEYCLOAK_URL=https://keycloak-production-15b2.up.railway.app
 NEXT_PUBLIC_KEYCLOAK_REALM=hivemind
 NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=hivemind-api
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
 SESSION_ENCRYPTION_KEY=<generate a secure random string>
 ```
 
