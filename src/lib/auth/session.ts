@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import type { NextRequest } from "next/server";
 
 const SESSION_COOKIE = "hm_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24; // 24h
@@ -80,5 +81,14 @@ export async function getSessionFromRequest(
   const token = cookies[SESSION_COOKIE];
   if (!token) return null;
 
+  return await decryptSession(token);
+}
+
+/** Version that uses NextRequest's built-in cookies API for more reliable cookie access. */
+export async function getSessionFromNextRequest(
+  request: NextRequest
+): Promise<SessionPayload | null> {
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
   return await decryptSession(token);
 }

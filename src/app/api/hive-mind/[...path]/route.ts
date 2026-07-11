@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionFromRequest, encryptSession, getSessionCookieOptions } from "@/lib/auth/session";
+import { getSessionFromNextRequest, encryptSession, getSessionCookieOptions } from "@/lib/auth/session";
 import { getServerAuthConfig } from "@/lib/auth/config";
 
 async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
@@ -13,7 +13,7 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   const search = new URL(request.url).search;
   const targetUrl = `${BACKEND_BASE}/api/v1/${backendPath}${search}`;
 
-  const session = await getSessionFromRequest(request);
+  const session = await getSessionFromNextRequest(request);
   const method = request.method;
 
   const headers: Record<string, string> = {

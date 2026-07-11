@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getSessionFromRequest,
+  getSessionFromNextRequest,
   encryptSession,
   getSessionCookieOptions,
 } from "@/lib/auth/session";
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
 
-  const session = await getSessionFromRequest(request);
+  const session = await getSessionFromNextRequest(request);
   if (!session?.refreshToken) {
     return NextResponse.json({ error: "No refresh token" }, { status: 401 });
   }
@@ -37,10 +37,12 @@ export async function POST(request: NextRequest) {
   );
 
   if (!tokenResponse.ok) {
-    const response = NextResponse.redirect(`${getBaseUrl()}/api/auth/login`);
     const cookie = getSessionCookieOptions();
-    response.cookies.set(cookie.name, "", { ...cookie.options, maxAge: 0 });
-    return response;
+    const deleteCookie = `${cookie.name}=; Path=${cookie.options.path}; HttpOnly; SameSite=${cookie.options.sameSite}; Max-Age=0${cookie.options.secure ? "; Secure" : ""}`;
+    const headers = new Headers();
+    headers.set("Location", `${getBaseUrl()}/api/auth/login`);
+    headers.append("Set-Cookie", deleteCookie);
+    return new Response(null, { status: 302, headers });
   }
 
   const tokens = await tokenResponse.json();

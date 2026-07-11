@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { CRMSidebar } from "@/components/crm/crm-sidebar";
 import { TenantProjectSelector } from "@/components/hive-mind/tenant-project-selector";
@@ -44,10 +44,17 @@ export default function HiveMindLayout({
 }) {
   const isConfigured = useIsAuthConfigured();
   const { isAuthenticated, isLoading } = useAuth();
-  const { tenants, loading: hmLoading, error: hmError, createTenant } = useHiveMind();
+  const { tenants, loading: hmLoading, error: hmError, createTenant, refreshTenants } = useHiveMind();
   const [orgName, setOrgName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Retry loading tenants once auth is confirmed (provider may have initialized before auth)
+  useEffect(() => {
+    if (isAuthenticated && (hmError || tenants.length === 0)) {
+      refreshTenants();
+    }
+  }, [isAuthenticated]);
 
   if (!isHiveMindEnabled()) {
     return (

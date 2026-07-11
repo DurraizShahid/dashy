@@ -81,11 +81,13 @@ export async function GET(request: NextRequest) {
   const jwt = await encryptSession(sessionPayload);
   const cookie = getSessionCookieOptions();
 
-  const response = NextResponse.redirect(`${getBaseUrl()}/hive-mind`);
+  const cookieOpts = cookie.options;
+  const cookieStr = `${cookie.name}=${jwt}; Path=${cookieOpts.path}; HttpOnly; SameSite=${cookieOpts.sameSite}; Max-Age=${cookieOpts.maxAge}${cookieOpts.secure ? "; Secure" : ""}`;
+  const headers = new Headers();
+  headers.set("Location", `${getBaseUrl()}/hive-mind`);
+  headers.append("Set-Cookie", cookieStr);
+  headers.append("Set-Cookie", `pkce_verifier=; Path=/; HttpOnly; Max-Age=0`);
+  headers.append("Set-Cookie", `oauth_state=; Path=/; HttpOnly; Max-Age=0`);
 
-  response.cookies.set(cookie.name, jwt, cookie.options);
-  response.cookies.delete("pkce_verifier");
-  response.cookies.delete("oauth_state");
-
-  return response;
+  return new Response(null, { status: 302, headers });
 }
