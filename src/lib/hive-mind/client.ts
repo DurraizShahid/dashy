@@ -64,7 +64,14 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
         );
       }
 
-      return response.json() as Promise<T>;
+      const json = (await response.json()) as Record<string, unknown>;
+
+      // Backend wraps responses in { success, data, meta } — unwrap the data field
+      if (json && typeof json === "object" && "data" in json) {
+        return json.data as T;
+      }
+
+      return json as T;
     } catch (error) {
       if (error instanceof HiveMindApiError) {
         throw error;
