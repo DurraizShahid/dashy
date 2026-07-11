@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { CRMSidebar } from "@/components/crm/crm-sidebar";
 import { TenantProjectSelector } from "@/components/hive-mind/tenant-project-selector";
@@ -43,7 +44,10 @@ export default function HiveMindLayout({
 }) {
   const isConfigured = useIsAuthConfigured();
   const { isAuthenticated, isLoading } = useAuth();
-  const { tenants, loading: hmLoading, error: hmError } = useHiveMind();
+  const { tenants, loading: hmLoading, error: hmError, createTenant } = useHiveMind();
+  const [orgName, setOrgName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   if (!isHiveMindEnabled()) {
     return (
@@ -126,6 +130,18 @@ export default function HiveMindLayout({
 
   // Authenticated but no tenants
   if (!hmLoading && tenants.length === 0 && !hmError) {
+    const handleCreate = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!orgName.trim()) return;
+      setCreating(true);
+      setCreateError(null);
+      const tenant = await createTenant(orgName.trim());
+      if (!tenant) {
+        setCreateError("Failed to create organization. Please try again.");
+      }
+      setCreating(false);
+    };
+
     return (
       <HiveMindShell>
         <div className="flex items-center justify-center py-16">
@@ -134,10 +150,37 @@ export default function HiveMindLayout({
             <h3 className="font-poppins font-semibold text-foreground mb-1">
               No Organization Memberships
             </h3>
-            <p className="text-sm text-muted-foreground">
-              Your account doesn&apos;t have access to any organizations.
-              Contact an administrator to get access.
+            <p className="text-sm text-muted-foreground mb-4">
+              Create your first organization to get started.
             </p>
+            <form onSubmit={handleCreate} className="flex flex-col gap-3">
+              <input
+                type="text"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                placeholder="Organization name"
+                className="h-9 px-3 rounded-xl text-sm bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                disabled={creating}
+                autoFocus
+              />
+              {createError && (
+                <p className="text-xs text-destructive">{createError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={creating || !orgName.trim()}
+                className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {creating ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Organization"
+                )}
+              </button>
+            </form>
           </div>
         </div>
       </HiveMindShell>

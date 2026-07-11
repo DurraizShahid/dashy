@@ -97,6 +97,13 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     return request<Tenant[]>("tenants");
   }
 
+  async function createTenant(input: { name: string }) {
+    return request<Tenant>("tenants", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
   async function listProjects(params?: { tenantId?: string }) {
     const qs = params?.tenantId
       ? `?tenantId=${encodeURIComponent(params.tenantId)}`
@@ -261,6 +268,7 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
 
     // Tenants & Projects
     listTenants,
+    createTenant,
     listProjects,
 
     // Public

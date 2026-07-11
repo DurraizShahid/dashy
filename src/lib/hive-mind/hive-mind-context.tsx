@@ -34,6 +34,7 @@ interface HiveMindState {
 
   refreshTenants: () => Promise<void>;
   refreshProjects: () => Promise<void>;
+  createTenant: (name: string) => Promise<Tenant | null>;
   setSelectedTenantId: (id: string | null) => void;
   setSelectedProjectId: (id: string | null) => void;
 }
@@ -56,6 +57,7 @@ const HiveMindContext = createContext<HiveMindState>({
   error: null,
   refreshTenants: async () => {},
   refreshProjects: async () => {},
+  createTenant: async () => null,
   setSelectedTenantId: () => {},
   setSelectedProjectId: () => {},
 });
@@ -180,6 +182,17 @@ export function HiveMindProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const createTenant = useCallback(async (name: string): Promise<Tenant | null> => {
+    if (!client) return null;
+    try {
+      const tenant = await client.createTenant({ name });
+      await refreshTenants();
+      return tenant;
+    } catch {
+      return null;
+    }
+  }, [client, refreshTenants]);
+
   useEffect(() => {
     if (!client || initializedRef.current) return;
     initializedRef.current = true;
@@ -216,6 +229,7 @@ export function HiveMindProvider({ children }: { children: ReactNode }) {
 
         refreshTenants,
         refreshProjects,
+        createTenant,
         setSelectedTenantId,
         setSelectedProjectId,
       }}
