@@ -9,17 +9,14 @@ import {
   Loader2,
   XCircle,
   ScrollText,
-  Filter,
   ArrowRight,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export default function HiveMindAuditLogsPage() {
   const { client, selectedTenantId, selectedTenant } = useHiveMind();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionFilter, setActionFilter] = useState("");
   const [nextCursor, setNextCursor] = useState<string | undefined>();
 
   const fetchLogs = useCallback(
@@ -56,8 +53,9 @@ export default function HiveMindAuditLogsPage() {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLogs();
-  }, [selectedTenantId]);
+  }, [fetchLogs]);
 
   return (
     <>

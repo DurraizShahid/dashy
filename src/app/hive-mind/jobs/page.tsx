@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
-import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import type { HiveMindJob } from "@/lib/hive-mind/types";
 import {
   Loader2,
@@ -82,11 +81,10 @@ export default function HiveMindJobsPage() {
 
   useEffect(() => {
     if (selectedTenantId) {
-      setJobs([]);
-      setNextCursor(undefined);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchJobs();
     }
-  }, [selectedTenantId, selectedProjectId, statusFilter]);
+  }, [fetchJobs, selectedTenantId]);
 
   return (
     <>

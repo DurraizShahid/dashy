@@ -1,10 +1,12 @@
-# Dashy — Product Architecture
+# Dashy — Product Architecture (Release Candidate v1)
 
 ## Overview
 
 Dashy is a Next.js 16 (App Router) dashboard application acting as the frontend for the **Hive Mind** backend platform.
-It currently hosts the **HelpTribe CRM** module (lead scraping/tracking) and will grow to include the full Hive Mind
-administration surface.
+It also hosts the **HelpTribe CRM** module (lead scraping/tracking/invoicing).
+
+**Release Candidate v1** (`dashy/release-candidate-v1`) implements the full Hive Mind product loop:
+Login → select tenant/project → ingest → watch job → document appears → search → agent context → manage API keys → audit logs.
 
 ## Stack
 

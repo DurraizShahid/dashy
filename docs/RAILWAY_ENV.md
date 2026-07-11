@@ -1,39 +1,47 @@
-# Railway Environment Plan
+# Railway Environment
 
 ## Current Status
 
-- The app is deployed on Railway (URL: `dashy-production-xxxx.up.railway.app`)
-- `.env` contains `DATABASE_URL` (Postgres), `OPENAI_API_KEY`, `GITHUB_TOKEN` (all gitignored)
-- No `railway.json` or `nixpacks.toml` config file
-- No private networking configured between Dashy and Hive Mind
+- Dashy is deployed on Railway (`dashy-production-xxxx.up.railway.app`)
+- Hive Mind API is deployed on Railway (`hive-mind-api-production-edd9.up.railway.app`)
+- Keycloak is deployed on Railway (`keycloak-production-15b2.up.railway.app`)
+- No `railway.json` or `nixpacks.toml` config file yet
+- Private networking not yet configured
 
 ## Services
 
 | Service | Purpose | URL |
 |---------|---------|-----|
 | Dashy (this) | Next.js frontend | `dashy-production-xxxx.up.railway.app` |
-| Hive Mind | Backend API | `hive-mind-production-929f.up.railway.app` |
+| Hive Mind API | Backend API | `hive-mind-api-production-edd9.up.railway.app` |
+| Keycloak | Auth provider | `keycloak-production-15b2.up.railway.app` |
 
 ## Required Env Vars
 
-### Production
+### Production (set on Railway dashboard)
 
 | Variable | Source | Notes |
 |----------|--------|-------|
 | `NEXT_PUBLIC_HIVE_MIND_API_URL` | Railway private network or public URL | Must be set for Hive Mind features |
-| `NEXT_PUBLIC_KEYCLOAK_URL` | Keycloak service | Future |
-| `NEXT_PUBLIC_KEYCLOAK_REALM` | Keycloak config | Future |
-| `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | Keycloak client | Future |
-| `KEYCLOAK_CLIENT_SECRET` | Keycloak client secret | Future, server-only |
-| `NEXTAUTH_SECRET` | Generated | Future, server-only |
+| `NEXT_PUBLIC_KEYCLOAK_URL` | Keycloak service | Keycloak deployment URL |
+| `NEXT_PUBLIC_KEYCLOAK_REALM` | Keycloak config | e.g. `hivemind` |
+| `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | Keycloak client | e.g. `hivemind-api` |
+| `KEYCLOAK_CLIENT_SECRET` | Keycloak client secret | Server-only |
+| `SESSION_ENCRYPTION_KEY` | Generated | Server-only, used for HM_SESSION JWT signing |
 
 ### Development
 
 Add to `.env.local`:
 
 ```env
-NEXT_PUBLIC_HIVE_MIND_API_URL=https://hive-mind-production-929f.up.railway.app
+NEXT_PUBLIC_HIVE_MIND_API_URL=https://hivemind-api-production-edd9.up.railway.app
+NEXT_PUBLIC_KEYCLOAK_URL=https://keycloak-production-15b2.up.railway.app
+NEXT_PUBLIC_KEYCLOAK_REALM=hivemind
+NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=hivemind-api
+SESSION_ENCRYPTION_KEY=<generate a secure random string>
 ```
+
+> **Note**: The Keycloak callback URL must be configured to include your local dev origin (`http://localhost:3000`). Without this, the OIDC flow will fail at the redirect step.
 
 ## Private Networking
 
