@@ -147,10 +147,37 @@ export interface JobListResponse {
   total: number;
 }
 
-export interface AuditLog {
+// ─── API Key Management ─────────────────────────────────────────
+
+export interface ApiKey {
+  id: string;
+  tenantId?: string;
+  name: string;
+  scopes: string[];
+  status: "active" | "revoked" | "expired";
+  expiresAt?: string | null;
+  lastUsedAt?: string | null;
+  createdAt: string;
+}
+
+export interface CreateApiKeyResponse {
+  apiKey: ApiKey;
+  plaintextKey: string;
+}
+
+export interface ApiKeyListResponse {
+  apiKeys: ApiKey[];
+  nextCursor?: string;
+  total: number;
+}
+
+// ─── Audit Log ──────────────────────────────────────────────────
+
+export interface AuditLogEntry {
   id: string;
   action: string;
   actorId: string;
+  actorType: string;
   targetType: string;
   targetId: string;
   tenantId?: string;
@@ -159,7 +186,7 @@ export interface AuditLog {
 }
 
 export interface AuditLogListResponse {
-  logs: AuditLog[];
+  logs: AuditLogEntry[];
   nextCursor?: string;
   total: number;
 }

@@ -12,6 +12,7 @@ import {
   FileText,
   ArrowRight,
   Filter,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +103,14 @@ export default function HiveMindDocumentsPage() {
             <option value="indexed">Indexed</option>
             <option value="failed">Failed</option>
           </select>
+          <button
+            onClick={() => fetchDocuments()}
+            disabled={loading}
+            className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className={cn("size-3", loading && "animate-spin")} />
+          </button>
         </div>
 
         {/* Loading */}

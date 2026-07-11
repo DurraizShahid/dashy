@@ -29,8 +29,24 @@ src/
 │   ├── globals.css         # Global styles, CSS variables, theme
 │   ├── (pages)/            # Placeholder for route-group layouts
 │   ├── api/                # API routes (Next.js Route Handlers)
-│   ├── hive-mind/          # Hive Mind module (NEW)
-│   ├── dashboard/          # HelpTribe dashboard
+│   ├── auth/               # Auth endpoints (login, callback, logout, refresh, me)
+│   └── hive-mind/[...path] # Proxy to Hive Mind backend API
+├── hive-mind/          # Hive Mind module
+│   ├── layout.tsx         # Auth-aware shell with sidebar + tenant/project selectors
+│   ├── page.tsx           # Redirects to /hive-mind/overview
+│   ├── overview/          # Dashboard overview with health, recent docs/jobs
+│   ├── health/            # Service health status
+│   ├── services/          # Service registry
+│   ├── knowledge/         # Knowledge base search
+│   ├── ingest/            # URL/file ingestion
+│   ├── documents/         # Document list + detail
+│   ├── jobs/              # Job list + detail
+│   ├── agents/            # Agent context queries
+│   ├── settings/          # Module configuration & status
+│   └── admin/             # Admin section
+│       ├── api-keys/      # API key management (create, list, revoke)
+│       └── audit-logs/    # Audit trail viewer
+├── dashboard/          # HelpTribe dashboard
 │   ├── leads/              # Lead management
 │   ├── contacts/           # Contact management
 │   ├── companies/          # Company management
@@ -55,15 +71,31 @@ src/
 
 ## Module Boundaries
 
-All existing HelpTribe CRM pages use `"use client"` and follow the CRMSidebar + CRMTopbar shell pattern.
-New Hive Mind pages follow the same shell pattern for visual consistency but will introduce:
+All Hive Mind pages use `"use client"` and follow the CRMSidebar + CRMTopbar shell pattern.
+New Hive Mind pages follow the same shell pattern for visual consistency.
 
-1. Server components where feasible (data fetching from Hive Mind API)
-2. A shared API client (`@/lib/hive-mind/client`)
+1. A shared API client (`@/lib/hive-mind/client`) — all calls go through `/api/hive-mind/*` server proxy
+2. `HiveMindProvider` + `useHiveMind()` context for tenant/project state (`@/lib/hive-mind/hive-mind-context`)
 3. Environment-based configuration (`NEXT_PUBLIC_HIVE_MIND_API_URL`)
+4. Server-side auth via Keycloak OIDC with encrypted HTTP-only session cookies (`src/lib/auth/session.ts`)
+
+### Auth Architecture
+
+```
+Browser ──► Next.js Route Handler (/api/auth/*) ──► Keycloak
+    │                          │
+    │                    /api/hive-mind/* proxy
+    │                          │
+    └── HTTP-only cookie ──────┘── Bearer token ──► Hive Mind API
+```
+
+- No API keys or tokens in browser code
+- No localStorage token storage
+- All Hive Mind API calls go through `/api/hive-mind/[...path]` server-side proxy
+- Proxy reads session cookie and attaches `Authorization: Bearer` header
 
 ## Integration Points
 
-- **Hive Mind API**: REST API at `NEXT_PUBLIC_HIVE_MIND_API_URL` (private Railway network)
-- **Keycloak**: Future OIDC auth provider (external, not yet configured)
+- **Hive Mind API**: REST API at `NEXT_PUBLIC_HIVE_MIND_API_URL` (private Railway network), proxied through `/api/hive-mind/*`
+- **Keycloak**: OIDC auth provider (configured via env vars), handles login/callback/logout/refresh
 - **Railway**: Deployment platform; service-to-service private networking
