@@ -59,6 +59,7 @@ export default function HiveMindOverviewPage() {
   }, [client, selectedTenantId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOverview();
   }, [fetchOverview]);
 

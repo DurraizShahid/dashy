@@ -74,11 +74,10 @@ export default function HiveMindDocumentsPage() {
 
   useEffect(() => {
     if (selectedTenantId) {
-      setDocuments([]);
-      setNextCursor(undefined);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchDocuments();
     }
-  }, [selectedTenantId, selectedProjectId, statusFilter]);
+  }, [fetchDocuments, selectedTenantId]);
 
   return (
     <>

@@ -1,4 +1,4 @@
-# Keycloak Frontend Auth — Current State
+# Keycloak Frontend Auth — Current State (Release Candidate v1)
 
 ## Status: Implemented
 

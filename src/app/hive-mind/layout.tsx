@@ -41,7 +41,6 @@ export default function HiveMindLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
   const isConfigured = useIsAuthConfigured();
   const { isAuthenticated, isLoading } = useAuth();
   const { tenants, loading: hmLoading, error: hmError } = useHiveMind();

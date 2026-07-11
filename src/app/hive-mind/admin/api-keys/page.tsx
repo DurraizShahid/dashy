@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -428,8 +427,9 @@ export default function HiveMindApiKeysPage() {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchKeys();
-  }, [selectedTenantId, statusFilter]);
+  }, [fetchKeys]);
 
   return (
     <>

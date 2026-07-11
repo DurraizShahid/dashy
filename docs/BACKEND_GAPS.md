@@ -1,9 +1,8 @@
-# Backend Gaps
+# Backend Gaps — Release Candidate v1
 
 ## Summary
 
-The Hive Mind API has multiple gaps that affect the Dashy frontend integration.
-Some have been resolved, others remain.
+Status as of Dashy RC v1 (`dashy/release-candidate-v1`) with Hive Mind RC PR #8.
 
 ## Gap 1: No Frontend API URL Configuration ✅ Resolved
 
@@ -19,9 +18,9 @@ Some have been resolved, others remain.
 
 ## Gap 4: No Shared Type Definitions ✅ Partially Resolved
 
-**Fix**: Types defined in `src/lib/hive-mind/types.ts`. Based on backend API descriptions, not yet verified against live backend.
+**Fix**: Types defined in `src/lib/hive-mind/types.ts`. Based on backend PR #6/#8 descriptions.
 
-Remaining: Backend PR #6 types may differ from frontend expectations. Verify against live deployment.
+Remaining: Verify against live deployment. Backend types may differ from frontend expectations.
 
 ## Gap 5: No Error Handling / Retry Strategy ✅ Partially Resolved
 
@@ -35,25 +34,23 @@ Remaining: No retry strategy, no exponential backoff, no circuit breaker.
 
 ## Gap 7: Missing Private Network Configuration ⚠️ Not Started
 
-**Fix**: Document in `RAILWAY_ENV.md` when Railway deployment is configured.
+**Fix**: Documented in `RAILWAY_ENV.md`. Not yet configured in Railway deployment.
 
-## Gap 8: API Key Management Endpoints ⚠️ Needs Verification
+## Gap 8: API Key Management Endpoints ⚠️ Not Verified Live
 
-**Status**: Backend PR #7 adds `GET/POST /api/v1/api-keys` and `POST /api/v1/api-keys/:id/revoke`.
-
-Frontend implements:
-- List, create, revoke flows
-- Plaintext key shown once on creation
-- No localStorage/sessionStorage key persistence
+**Status**: Frontend implements list/create/revoke flows with:
+- Plaintext key shown once on creation, never persisted
 - Permission-aware (403 handling)
+- Status filter + cursor pagination
 
-Remaining: Verify against live backend after PR #7 is merged and deployed.
+**Remaining**: Backend PR #7/RC PR #8 must be merged and deployed. Then verify create/list/revoke end-to-end.
 
-## Gap 9: Audit Logs Endpoint ⚠️ Needs Verification
+## Gap 9: Audit Logs Endpoint ⚠️ Not Verified Live
 
-**Status**: `GET /api/v1/audit-logs` endpoint exists but not yet verified against live backend.
+**Status**: Frontend implements list with cursor pagination and tenant filtering.
 
-Frontend implements:
-- List with cursor-based pagination
-- Tenant filtering
-- Action/target/actor display
+**Remaining**: Verify against live backend after RC merge.
+
+## Gap 10: Live E2E Not Tested ⚠️ Not Verified
+
+**Status**: No local Keycloak environment available. Full live loop (login → ingest → job → document → search → agent → API keys → audit logs) not yet verified in browser. See blocker in RC PR body.
