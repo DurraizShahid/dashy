@@ -69,7 +69,7 @@ export default function HiveMindLayout({
                 </h2>
                 <p className="text-sm text-muted-foreground max-w-md">
                   Set <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                    NEXT_PUBLIC_HIVE_MIND_API_URL
+                    NEXT_PUBLIC_HIVEMIND_API_URL
                   </code>{" "}
                   in your environment to enable Hive Mind features.
                 </p>

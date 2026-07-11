@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/hive-mind/client";
+import { useEffect, useState } from "react";
+import {
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
+import { useHiveMindClient } from "@/lib/hive-mind/provider";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import { cn } from "@/lib/utils";
 import type { HealthCheckResponse } from "@/lib/hive-mind/types";
@@ -16,51 +22,80 @@ interface HealthStatusProps {
   className?: string;
 }
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof HiveMindApiError) {
+    return `API error ${err.status}: ${err.statusText}`;
+  }
+  if (err instanceof HiveMindNetworkError) {
+    return err.message;
+  }
+  return err instanceof Error ? err.message : "Unknown error";
+}
+
 export function HealthStatus({ className }: HealthStatusProps) {
+  const { client, isReady } = useHiveMindClient();
   const [state, setState] = useState<ConnectionState>({ status: "loading" });
 
-  const handleResult = useCallback((data: HealthCheckResponse) => {
-    setState({ status: "success", data });
-  }, []);
-
-  const handleError = useCallback((err: unknown) => {
-    if (err instanceof HiveMindApiError) {
-      setState({
-        status: "error",
-        message: `API error ${err.status}: ${err.statusText}`,
-      });
-    } else if (err instanceof HiveMindNetworkError) {
-      setState({
-        status: "error",
-        message: err.message,
-      });
-    } else {
-      setState({
-        status: "error",
-        message: err instanceof Error ? err.message : "Unknown error",
-      });
-    }
-  }, []);
-
-  const fetchHealth = useCallback(() => {
-    const client = createClient();
-    client.getHealth().then(handleResult).catch(handleError);
-  }, [handleResult, handleError]);
-
   useEffect(() => {
-    fetchHealth();
-  }, [fetchHealth]);
+    if (!client || !isReady) return;
+
+    let cancelled = false;
+
+    client
+      .getHealth()
+      .then((data) => {
+        if (!cancelled) setState({ status: "success", data });
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setState({ status: "error", message: getErrorMessage(err) });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, isReady]);
+
+  // Early return after all hooks for no-client state
+  if (!client) {
+    return (
+      <div className={cn("rounded-[20px] bg-card p-6 shadow-card", className)}>
+        <div className="flex items-start gap-3">
+          <XCircle className="size-6 shrink-0 text-destructive mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-poppins font-semibold text-foreground">
+              Not Available
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Hive Mind client not available — is the API URL configured?
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   function handleRetry() {
     setState({ status: "loading" });
-    fetchHealth();
+    if (client) {
+      client
+        .getHealth()
+        .then((data) => setState({ status: "success", data }))
+        .catch((err) => setState({ status: "error", message: getErrorMessage(err) }));
+    }
   }
 
   // ─── Loading ────────────────────────────────────────────────
 
   if (state.status === "loading") {
     return (
-      <div className={cn("flex items-center gap-2 text-muted-foreground text-sm", className)}>
+      <div
+        className={cn(
+          "flex items-center gap-2 text-muted-foreground text-sm",
+          className
+        )}
+      >
         <Loader2 className="size-4 animate-spin" />
         <span>Connecting to Hive Mind...</span>
       </div>
@@ -97,9 +132,15 @@ export function HealthStatus({ className }: HealthStatusProps) {
   // ─── Success ────────────────────────────────────────────────
 
   const { data } = state;
-  const healthyCount = data.services.filter((s) => s.status === "healthy").length;
-  const degradedCount = data.services.filter((s) => s.status === "degraded").length;
-  const unhealthyCount = data.services.filter((s) => s.status === "unhealthy").length;
+  const healthyCount = data.services.filter(
+    (s) => s.status === "healthy"
+  ).length;
+  const degradedCount = data.services.filter(
+    (s) => s.status === "degraded"
+  ).length;
+  const unhealthyCount = data.services.filter(
+    (s) => s.status === "unhealthy"
+  ).length;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -118,7 +159,9 @@ export function HealthStatus({ className }: HealthStatusProps) {
               <h2 className="font-poppins font-semibold text-foreground">
                 System Status
               </h2>
-              <p className="text-sm text-muted-foreground capitalize">{data.status}</p>
+              <p className="text-sm text-muted-foreground capitalize">
+                {data.status}
+              </p>
             </div>
           </div>
           <button
@@ -134,25 +177,32 @@ export function HealthStatus({ className }: HealthStatusProps) {
         <div className="flex gap-4 mt-4">
           <div className="flex items-center gap-1.5">
             <div className="size-2.5 rounded-full bg-green-600" />
-            <span className="text-xs text-muted-foreground">{healthyCount} healthy</span>
+            <span className="text-xs text-muted-foreground">
+              {healthyCount} healthy
+            </span>
           </div>
           {degradedCount > 0 && (
             <div className="flex items-center gap-1.5">
               <div className="size-2.5 rounded-full bg-amber-500" />
-              <span className="text-xs text-muted-foreground">{degradedCount} degraded</span>
+              <span className="text-xs text-muted-foreground">
+                {degradedCount} degraded
+              </span>
             </div>
           )}
           {unhealthyCount > 0 && (
             <div className="flex items-center gap-1.5">
               <div className="size-2.5 rounded-full bg-destructive" />
-              <span className="text-xs text-muted-foreground">{unhealthyCount} unhealthy</span>
+              <span className="text-xs text-muted-foreground">
+                {unhealthyCount} unhealthy
+              </span>
             </div>
           )}
         </div>
 
         {data.uptime > 0 && (
           <p className="text-xs text-muted-foreground mt-3">
-            Uptime: {Math.floor(data.uptime / 3600)}h {Math.floor((data.uptime % 3600) / 60)}m
+            Uptime: {Math.floor(data.uptime / 3600)}h{" "}
+            {Math.floor((data.uptime % 3600) / 60)}m
           </p>
         )}
       </div>

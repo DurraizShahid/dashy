@@ -3,20 +3,21 @@
 import { useEffect, useState } from "react";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { AuthGate } from "@/components/auth/auth-gate";
-import { createClient } from "@/lib/hive-mind/client";
+import { useHiveMindClient } from "@/lib/hive-mind/provider";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import { Loader2, XCircle, RefreshCw, Globe, Wifi, WifiOff, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ServiceRegistryEntry } from "@/lib/hive-mind/types";
 
 function ServiceRegistryList() {
+  const { client } = useHiveMindClient();
   const [services, setServices] = useState<ServiceRegistryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    const client = createClient();
+    if (!client) return;
     let cancelled = false;
 
     client
@@ -36,7 +37,7 @@ function ServiceRegistryList() {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [refreshKey]);
+  }, [client, refreshKey]);
 
   function handleRefresh() {
     setLoading(true);

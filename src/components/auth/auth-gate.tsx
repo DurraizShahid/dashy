@@ -1,6 +1,9 @@
 /**
  * AuthGate — wraps content that requires authentication.
  *
+ * Uses the server-side Keycloak session for auth state.
+ * No localStorage tokens are used.
+ *
  * When Keycloak is not configured, shows an informative message.
  * When Keycloak IS configured but the user is not authenticated,
  * shows a prompt to log in.
@@ -29,7 +32,7 @@ export function AuthGate({
   title = "Authentication Required",
   description,
 }: AuthGateProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
   const isConfigured = useIsAuthConfigured();
 
   // Still loading auth state
@@ -83,6 +86,12 @@ export function AuthGate({
           <p className="text-sm text-muted-foreground mt-1">
             {description || "Please log in to access this feature."}
           </p>
+          <button
+            onClick={login}
+            className="inline-flex items-center gap-1 mt-2 text-sm font-medium text-primary hover:underline"
+          >
+            Sign in with Keycloak
+          </button>
         </div>
       </div>
     </div>
