@@ -51,25 +51,23 @@ SESSION_ENCRYPTION_KEY=<generate a secure random string>
 
 > The Keycloak redirect URI must include `http://localhost:3000/api/auth/callback` for local dev.
 
+## Private Networking
+
+Dashy is configured to connect to Hive Mind via Railway private network
+(`http://hivemind-api.railway.internal`). As of 2026-07-11, the private DNS
+resolves correctly from the Dashy container (proxy returns 502 with
+`fetch failed` when backend is unreachable, 401 when reachable but unauthenticated).
+
+**Status**: Private network URL is set but may not be reachable. If proxy
+returns 502, switch `NEXT_PUBLIC_HIVE_MIND_API_URL` to the public URL:
+`https://hivemind-api-production-edd9.up.railway.app`
+
 ## Deployment Config
 
-No `railway.json` or `nixpacks.toml` yet — Railway auto-detects Next.js.
+No `railway.json` or `nixpacks.toml` — Railway auto-detects Next.js.
 
-Future `railway.json`:
-
-```json
-{
-  "build": {
-    "buildCommand": "npm run build",
-    "startCommand": "npm start"
-  },
-  "deploy": {
-    "healthcheckPath": "/api/auth/me",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3
-  }
-}
-```
+Build: `npm ci` → `npm run build` (next build) → `npm start` (next start on port 8080)
+Branch: `dashy/release-candidate-v1` (auto-deploys on push)
 
 ## Zero-Downtime Deploys
 
