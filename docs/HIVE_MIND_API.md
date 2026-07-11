@@ -1,107 +1,88 @@
-# Hive Mind API Client Design
+# Hive Mind API Client (Release Candidate v1)
 
 ## Overview
 
-The Hive Mind API client provides type-safe access to the Hive Mind backend from Next.js frontend code.
-All API calls go through a single client module to centralize configuration, error handling, and auth token management.
-
-## Base Configuration
-
-- **Base URL**: Read from `NEXT_PUBLIC_HIVE_MIND_API_URL` environment variable
-- **Default timeout**: 15s (configurable per-request)
-- **Auth**: Bearer token in `Authorization` header (via future Keycloak integration)
+The Hive Mind API client provides type-safe access to the Hive Mind backend through a server-side proxy.
+All API calls go through `/api/hive-mind/*` — the browser never has direct access to the backend.
 
 ## Client Architecture
 
 ```
 src/lib/hive-mind/
-├── client.ts       # Main API client with fetch wrapper
-├── types.ts        # Shared TypeScript types/enums
-└── errors.ts       # Custom error classes
+├── client.ts         # API client — all calls via `/api/hive-mind/*` proxy
+├── types.ts          # Shared TypeScript types (Me, Tenant, Project, Document, Job, ApiKey, AuditLog)
+├── errors.ts         # Custom error classes (HiveMindApiError, HiveMindNetworkError)
+├── hive-mind-context.tsx  # React context (client, tenant/project state, loading)
+└── provider.tsx       # Provider wrapper
 ```
 
-### Core Client (`client.ts`)
+## Proxy Design
 
-```typescript
-// Design sketch — final implementation in src/lib/hive-mind/client.ts
+All requests go through a server-side route handler at `src/app/api/hive-mind/[...path]/route.ts`:
 
-class HiveMindClient {
-  private baseUrl: string;
-  private token?: string;
-
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl.replace(/\/$/, "");
-  }
-
-  setToken(token: string) { this.token = token; }
-  clearToken() { this.token = undefined; }
-
-  async request<T>(path: string, options?: RequestInit): Promise<T> {
-    const url = `${this.baseUrl}${path}`;
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
-      ...options?.headers,
-    };
-
-    const response = await fetch(url, { ...options, headers });
-
-    if (!response.ok) {
-      throw new ApiError(response.status, await response.text().catch(() => ""));
-    }
-
-    return response.json() as Promise<T>;
-  }
-
-  // Convenience methods
-  get<T>(path: string) { return this.request<T>(path); }
-  post<T>(path: string, body?: unknown) { return this.request<T>(path, { method: "POST", body: JSON.stringify(body) }); }
-  put<T>(path: string, body?: unknown) { return this.request<T>(path, { method: "PUT", body: JSON.stringify(body) }); }
-  delete<T>(path: string) { return this.request<T>(path, { method: "DELETE" }); }
-}
+```
+Browser fetch(/api/hive-mind/me)
+  → Next.js Route Handler
+    → Reads `hm_session` HTTP-only cookie
+    → Decrypts JWT to get accessToken
+    → Fetches HIVE_MIND_API_URL/api/v1/me with Authorization: Bearer <token>
+    → Returns response to browser
 ```
 
-### Endpoints
+> The proxy reads `HIVE_MIND_API_URL` (server-only) first, then falls back to `NEXT_PUBLIC_HIVE_MIND_API_URL`. The backend URL is never exposed to the browser.
 
-All endpoints are relative to `NEXT_PUBLIC_HIVE_MIND_API_URL`.
+## Auth Flow
+
+- Client never has access to access tokens
+- Session is encrypted in an HTTP-only cookie (`hm_session`)
+- Proxy decrypts the session and attaches Bearer token server-side
+- No X-API-Key in browser code
+- No localStorage token storage
+- PKCE uses S256 challenge method (SHA-256 hash)
+- Callback fails if PKCE verifier or oauth_state cookie is missing
+
+## Endpoints
+
+All methods are accessed through the client object returned by `createClient()`.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/` | No | Service info |
-| GET | `/health` | No | Full health check |
+| GET | `/api/v1/` | No | Service info |
+| GET | `/api/v1/health` | No | Full health check |
 | GET | `/api/v1/version` | No | Version info |
+| GET | `/api/v1/me` | Yes | Current user info |
+| GET | `/api/v1/tenants` | Yes | List tenants |
+| GET | `/api/v1/projects?tenantId=` | Yes | List projects |
 | GET | `/api/v1/service-registry` | Yes | Registered services |
-| GET | `/api/v1/knowledge/search?q=...` | Yes | Knowledge search |
+| GET | `/api/v1/knowledge/search?q=` | Yes | Knowledge search |
 | POST | `/api/v1/ingest/url` | Yes | Ingest URL content |
+| POST | `/api/v1/ingest/file` | Yes | Ingest file upload |
 | GET | `/api/v1/jobs/:id` | Yes | Job status |
+| GET | `/api/v1/documents` | Yes | List documents (cursor pagination) |
+| GET | `/api/v1/documents/:id` | Yes | Document detail with chunks |
+| GET | `/api/v1/jobs` | Yes | List jobs (cursor pagination) |
 | POST | `/api/v1/agent/context` | Yes | Agent context query |
+| GET | `/api/v1/api-keys` | Yes | List API keys |
+| POST | `/api/v1/api-keys` | Yes | Create API key |
+| POST | `/api/v1/api-keys/:id/revoke` | Yes | Revoke API key |
+| GET | `/api/v1/audit-logs` | Yes | List audit logs |
 
-### Error Handling
+## Error Handling
 
-```typescript
-class ApiError extends Error {
-  constructor(
-    public status: number,
-    public body: string,
-  ) {
-    super(`Hive Mind API ${status}: ${body}`);
-    this.name = "ApiError";
-  }
+- `HiveMindApiError(status, statusText, body)` — backend returned error status
+- `HiveMindNetworkError(message)` — network failure or timeout
+- All pages handle 401 (session expired), 403 (permission denied), 404 (not found)
+- No stack traces shown to users
 
-  get isUnauthenticated() { return this.status === 401; }
-  get isNotFound() { return this.status === 404; }
-  get isServerError() { return this.status >= 500; }
-}
-```
+## Security Properties
 
-## React Integration
-
-- `useHiveMind()` hook (future) — returns typed client instance, auth status, and connection state
-- Client instantiated once and cached via module-level singleton or React context
-- Auth token set via Keycloak token refresh callback
-
-## Migration Path
-
-1. Phase 1 (current): Basic client + health page (no auth)
-2. Phase 2 (with Keycloak): Auth token injection, protected endpoints
-3. Phase 3: React hooks, SWR/React Query integration, streaming support
+| Property | Status |
+|----------|--------|
+| Browser has access to bearer token | ❌ No (server-side only) |
+| Browser has access to refresh token | ❌ No (server-side only) |
+| localStorage contains auth tokens | ❌ No (only tenant/project preferences) |
+| X-API-Key used in browser code | ❌ No |
+| Plaintext API key persisted in browser | ❌ No (shown once, cleared on close) |
+| PKCE uses S256 challenge | ✅ Yes |
+| Callback fails without verifier | ✅ Yes |
+| State verified strictly | ✅ Yes |

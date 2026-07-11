@@ -43,7 +43,25 @@ export function authMiddleware(env: Env) {
     if (env.AUTH_MODE === 'keycloak' || env.AUTH_MODE === 'hybrid') {
       const authHeader = c.req.header('Authorization');
       if (authHeader?.startsWith('Bearer ')) {
-        c.set('auth', { type: 'bearer' });
+        const token = authHeader.slice(7);
+        try {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as Record<string, unknown>;
+            c.set('auth', {
+              type: 'keycloak',
+              sub: payload.sub,
+              email: payload.email,
+              preferred_username: payload.preferred_username,
+              given_name: payload.given_name,
+              family_name: payload.family_name,
+            });
+          } else {
+            c.set('auth', { type: 'bearer' });
+          }
+        } catch {
+          c.set('auth', { type: 'bearer' });
+        }
         return await next();
       }
       if (env.AUTH_MODE === 'keycloak') {

@@ -1,15 +1,3 @@
-/**
- * HiveMindProvider — provides a singleton API client via React context.
- *
- * Usage in root layout:
- *   <HiveMindProvider>
- *     {children}
- *   </HiveMindProvider>
- *
- * Then in any component:
- *   const client = useHiveMindClient();
- */
-
 "use client";
 
 import {
@@ -18,9 +6,6 @@ import {
   useMemo,
 } from "react";
 import { createClient, type HiveMindClient } from "./client";
-import { HiveMindConfigError } from "./errors";
-import { getHiveMindApiKey } from "@/lib/env";
-import type { HiveMindClientConfig } from "./types";
 
 interface HiveMindContextValue {
   client: HiveMindClient | null;
@@ -28,24 +13,15 @@ interface HiveMindContextValue {
   isReady: boolean;
 }
 
-function createInitialState(
-  config?: Partial<HiveMindClientConfig>
-): HiveMindContextValue {
+function createInitialState(): HiveMindContextValue {
   try {
-    const apiKey = getHiveMindApiKey();
-    const mergedConfig: Partial<HiveMindClientConfig> = {
-      ...config,
-      token: config?.token ?? apiKey,
-    };
-    const client = createClient(mergedConfig);
+    const client = createClient();
     return { client, error: null, isReady: true };
   } catch (err) {
     const message =
-      err instanceof HiveMindConfigError
+      err instanceof Error
         ? err.message
-        : err instanceof Error
-          ? err.message
-          : "Unknown error initializing Hive Mind client";
+        : "Unknown error initializing Hive Mind client";
     return { client: null, error: message, isReady: false };
   }
 }
@@ -58,12 +34,10 @@ const HiveMindContext = createContext<HiveMindContextValue>({
 
 interface HiveMindProviderProps {
   children: React.ReactNode;
-  /** Optional explicit config for testing or custom setup. */
-  config?: Partial<HiveMindClientConfig>;
 }
 
-export function HiveMindProvider({ children, config }: HiveMindProviderProps) {
-  const state = useMemo(() => createInitialState(config), [config]);
+export function HiveMindProvider({ children }: HiveMindProviderProps) {
+  const state = useMemo(() => createInitialState(), []);
 
   return (
     <HiveMindContext.Provider value={state}>
@@ -72,13 +46,6 @@ export function HiveMindProvider({ children, config }: HiveMindProviderProps) {
   );
 }
 
-/**
- * Access the Hive Mind API client from any component.
- * Returns { client, error, isReady }.
- *
- * When not ready (no env var set), `client` is null and `error` contains
- * the configuration message.
- */
 export function useHiveMindClient(): HiveMindContextValue {
   return useContext(HiveMindContext);
 }

@@ -7,6 +7,7 @@ import { versionRouter } from './routes/version';
 import { registryRouter } from './routes/service-registry';
 import { agentRouter } from './routes/agent';
 import { ingestRouter } from './routes/ingest';
+import { tenantsRouter } from './routes/tenants';
 import { API_PREFIX } from '@hivemind/shared';
 
 export function createApp() {
@@ -26,6 +27,7 @@ export function createApp() {
   app.route(`${API_PREFIX}/service-registry`, registryRouter);
   app.route(`${API_PREFIX}/agent`, agentRouter);
   app.route(`${API_PREFIX}/ingest`, ingestRouter);
+  app.route(`${API_PREFIX}/tenants`, tenantsRouter);
 
   app.notFound((c) => c.json({ code: 'NOT_FOUND', message: `Route not found: ${c.req.method} ${c.req.path}` }, 404));
 

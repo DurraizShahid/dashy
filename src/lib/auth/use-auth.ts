@@ -1,64 +1,76 @@
-/**
- * useAuth hook — manages authentication state.
- *
- * In Phase 1 (pre-Keycloak), auth state is driven by a manually-set token
- * stored in localStorage. Once Keycloak is deployed, this hook will be
- * replaced with real OIDC token management.
- *
- * Usage:
- *   const { isAuthenticated, isLoading, token, login, logout } = useAuth();
- */
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { isAuthEnabled } from "./config";
 
-const TOKEN_STORAGE_KEY = "hm_auth_token";
-
 export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
-  token: string | null;
-  login: (token: string) => void;
+  session: {
+    sub: string;
+    email?: string | null;
+    name?: string | null;
+    preferredUsername?: string | null;
+  } | null;
+  login: () => void;
   logout: () => void;
 }
 
 export function useAuth(): AuthState {
-  // Lazy initialize from localStorage (safe: only runs client-side)
-  const [token, setToken] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem(TOKEN_STORAGE_KEY);
-  });
-  const [isLoading] = useState(false);
+  const [session, setSession] = useState<AuthState["session"]>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = useCallback((newToken: string) => {
-    localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
-    setToken(newToken);
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.authenticated) {
+          setSession({
+            sub: data.sub,
+            email: data.email,
+            name: data.name,
+            preferredUsername: data.preferredUsername,
+          });
+        } else {
+          setSession(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setSession(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const login = useCallback(() => {
+    window.location.href = "/api/auth/login";
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-    setToken(null);
+    window.location.href = "/api/auth/logout";
   }, []);
 
   return {
-    isAuthenticated: !!token,
+    isAuthenticated: session !== null,
     isLoading,
-    token,
+    session,
     login,
     logout,
   };
 }
 
-/**
- * Whether the app should treat auth as "available" (Keycloak configured).
- * If auth isn't configured, protected sections show a message rather than
- * a login prompt.
- *
- * Reads env vars which are inlined at build time, so this is synchronous.
- */
 export function useIsAuthConfigured(): boolean {
-  const [configured] = useState(isAuthEnabled);
-  return configured;
+  return isAuthEnabled();
 }

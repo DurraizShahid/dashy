@@ -2,21 +2,21 @@
 
 import { useState } from "react";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
-import { AuthGate } from "@/components/auth/auth-gate";
-import { createClient } from "@/lib/hive-mind/client";
+import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import {
   Bot,
   Loader2,
   Send,
   XCircle,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function AgentQueryForm() {
+  const { client, selectedTenantId, selectedProjectId, selectedTenant } = useHiveMind();
   const [query, setQuery] = useState("");
-  const [contextKey, setContextKey] = useState("");
-  const [contextValue, setContextValue] = useState("");
+  const [agentType, setAgentType] = useState("default");
   const [response, setResponse] = useState<{
     answer: string;
     sources: string[];
@@ -28,21 +28,20 @@ function AgentQueryForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const q = query.trim();
-    if (!q) return;
+    if (!q || !selectedTenantId) return;
 
     setLoading(true);
     setError(null);
     setResponse(null);
 
     try {
-      const client = createClient();
-      const context: Record<string, string> = {};
-      if (contextKey.trim() && contextValue.trim()) {
-        context[contextKey.trim()] = contextValue.trim();
-      }
-      const result = await client.queryAgentContext({
+      const result = await client!.queryAgentContext({
         query: q,
-        context: Object.keys(context).length > 0 ? context : undefined,
+        context: {
+          tenantId: selectedTenantId,
+          ...(selectedProjectId ? { projectId: selectedProjectId } : {}),
+          agentType,
+        },
       });
       setResponse(result);
     } catch (err) {
@@ -51,17 +50,38 @@ function AgentQueryForm() {
       } else if (err instanceof HiveMindNetworkError) {
         setError(err.message);
       } else {
-        setError(
-          err instanceof Error ? err.message : "Agent query failed"
-        );
+        setError(err instanceof Error ? err.message : "Agent query failed");
       }
     } finally {
       setLoading(false);
     }
   }
 
+  if (!selectedTenantId) {
+    return (
+      <div className="rounded-[20px] bg-card p-6 shadow-card text-center">
+        <Brain className="size-8 mx-auto text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground">
+          Select an organization to query agents.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Scope indicator */}
+      <div className="rounded-[20px] bg-muted/50 p-3">
+        <p className="text-xs text-muted-foreground">
+          <Brain className="size-3 inline mr-1" />
+          Agent scope:{" "}
+          <span className="font-medium text-foreground">{selectedTenant?.name}</span>
+          {selectedProjectId && (
+            <span className="text-muted-foreground"> / Project</span>
+          )}
+        </p>
+      </div>
+
       <div className="rounded-[20px] bg-card p-6 shadow-card">
         <h3 className="font-poppins font-semibold text-foreground mb-1">
           Query Agent
@@ -72,10 +92,24 @@ function AgentQueryForm() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label
-              htmlFor="agent-query"
-              className="text-xs font-medium text-foreground mb-1 block"
+            <label htmlFor="agent-type" className="text-xs font-medium text-foreground mb-1 block">
+              Agent Type
+            </label>
+            <select
+              id="agent-type"
+              value={agentType}
+              onChange={(e) => setAgentType(e.target.value)}
+              className="h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground"
             >
+              <option value="default">Default</option>
+              <option value="research">Research</option>
+              <option value="summarize">Summarize</option>
+              <option value="analyze">Analyze</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="agent-query" className="text-xs font-medium text-foreground mb-1 block">
               Query
             </label>
             <textarea
@@ -90,47 +124,6 @@ function AgentQueryForm() {
                 "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               )}
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label
-                htmlFor="context-key"
-                className="text-xs font-medium text-foreground mb-1 block"
-              >
-                Context key (optional)
-              </label>
-              <input
-                id="context-key"
-                type="text"
-                value={contextKey}
-                onChange={(e) => setContextKey(e.target.value)}
-                placeholder="e.g., product"
-                className={cn(
-                  "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                )}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="context-value"
-                className="text-xs font-medium text-foreground mb-1 block"
-              >
-                Context value
-              </label>
-              <input
-                id="context-value"
-                type="text"
-                value={contextValue}
-                onChange={(e) => setContextValue(e.target.value)}
-                placeholder="e.g., Dilivygo"
-                className={cn(
-                  "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                )}
-              />
-            </div>
           </div>
 
           <button
@@ -157,7 +150,7 @@ function AgentQueryForm() {
         </form>
       </div>
 
-      {/* Response */}
+      {/* Error */}
       {error && (
         <div className="rounded-[20px] bg-card p-4 shadow-card">
           <div className="flex items-start gap-2">
@@ -167,8 +160,9 @@ function AgentQueryForm() {
         </div>
       )}
 
+      {/* Response */}
       {response && (
-        <div className="rounded-[20px] bg-card p-6 shadow-card space-y-3">
+        <div className="rounded-[20px] bg-card p-6 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <Bot className="size-5 text-primary" />
             <h3 className="font-poppins font-semibold text-foreground text-sm">
@@ -221,12 +215,7 @@ export default function HiveMindAgentsPage() {
       />
 
       <div className="px-6 pb-6 max-w-2xl">
-        <AuthGate
-          title="Agent Query"
-          description="Interact with Hive Mind agents to retrieve contextual information and insights."
-        >
-          <AgentQueryForm />
-        </AuthGate>
+        <AgentQueryForm />
       </div>
     </>
   );

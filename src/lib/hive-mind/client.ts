@@ -1,15 +1,3 @@
-/**
- * Hive Mind API Client.
- *
- * Type-safe fetch wrapper around the Hive Mind REST API.
- * All endpoints are relative to the configured base URL.
- *
- * Usage:
- *   const client = createClient();
- *   const health = await client.getHealth();
- */
-
-import { getPublicEnv } from "@/lib/env";
 import {
   type HiveMindClientConfig,
   type HiveMindServiceInfo,
@@ -20,49 +8,72 @@ import {
   type JobStatus,
   type AgentContextRequest,
   type AgentContextResponse,
+  type MeResponse,
+  type Tenant,
+  type Project,
+  type DocumentListResponse,
+  type DocumentDetailResponse,
+  type JobListResponse,
+  type AuditLogListResponse,
+  type ApiKeyListResponse,
+  type CreateApiKeyResponse,
+  type ApiKey,
 } from "./types";
 import {
   HiveMindApiError,
-  HiveMindConfigError,
   HiveMindNetworkError,
 } from "./errors";
 
 const DEFAULT_TIMEOUT = 15_000;
 
-/**
- * Creates a Hive Mind API client.
- *
- * When `config` is omitted, reads base URL from
- * `NEXT_PUBLIC_HIVE_MIND_API_URL` env var.
- */
-export function createClient(config?: Partial<HiveMindClientConfig>) {
-  const baseUrl =
-    config?.baseUrl ?? getPublicEnv("NEXT_PUBLIC_HIVE_MIND_API_URL");
+function proxyPath(endpoint: string): string {
+  const clean = endpoint.replace(/^\//, "");
+  return `/api/hive-mind/${clean}`;
+}
 
-  if (!baseUrl) {
-    throw new HiveMindConfigError(
-      "Hive Mind API URL is not configured. " +
-        "Set NEXT_PUBLIC_HIVE_MIND_API_URL in your .env.local file."
-    );
+interface KnowledgeSearchOptions {
+  tenantId?: string;
+  projectId?: string;
+  maxResults?: number;
+  minScore?: number;
+}
+
+interface BackendKnowledgeSearchResult {
+  chunkId: string;
+  documentId: string;
+  documentTitle: string;
+  content: string;
+  score: number;
+  sourceUrl?: string;
+}
+
+interface BackendKnowledgeSearchResponse {
+  query: string;
+  results: BackendKnowledgeSearchResult[];
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
   }
+  return btoa(binary);
+}
 
-  const normalizedBase = baseUrl.replace(/\/+$/, "");
+export function createClient(config?: Partial<HiveMindClientConfig>) {
   const timeout = config?.timeout ?? DEFAULT_TIMEOUT;
-  let token: string | undefined = config?.token;
 
   async function request<T>(
     path: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${normalizedBase}${path}`;
+    const url = proxyPath(path);
     const headers = new Headers(options.headers);
 
     if (!headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
-    }
-
-    if (token && !headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${token}`);
     }
 
     const controller = new AbortController();
@@ -84,7 +95,14 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
         );
       }
 
-      return response.json() as Promise<T>;
+      const json = (await response.json()) as Record<string, unknown>;
+
+      // Backend wraps responses in { success, data, meta } — unwrap the data field
+      if (json && typeof json === "object" && "data" in json) {
+        return json.data as T;
+      }
+
+      return json as T;
     } catch (error) {
       if (error instanceof HiveMindApiError) {
         throw error;
@@ -100,68 +118,221 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
 
   // ─── Auth ────────────────────────────────────────────────────
 
-  function setAuth(newToken: string) {
-    token = newToken;
+  async function getMe() {
+    return request<MeResponse>("me");
   }
 
-  function clearAuth() {
-    token = undefined;
+  // ─── Tenants & Projects ──────────────────────────────────────
+
+  async function listTenants() {
+    const result = await request<Record<string, unknown>>("tenants");
+    if (Array.isArray(result)) return result as Tenant[];
+    if (result && typeof result === "object" && Array.isArray(result.tenants)) return result.tenants as Tenant[];
+    return [];
   }
 
-  function getToken(): string | undefined {
-    return token;
+  async function createTenant(input: { name: string }) {
+    return request<Tenant>("tenants", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  async function listProjects(params?: { tenantId?: string }) {
+    const qs = params?.tenantId
+      ? `?tenantId=${encodeURIComponent(params.tenantId)}`
+      : "";
+    const result = await request<Record<string, unknown>>(`projects${qs}`);
+    if (Array.isArray(result)) return result as Project[];
+    if (result && typeof result === "object" && Array.isArray(result.projects)) return result.projects as Project[];
+    return [];
   }
 
   // ─── Public Endpoints ────────────────────────────────────────
 
   function getServiceInfo() {
-    return request<HiveMindServiceInfo>("/");
+    return request<HiveMindServiceInfo>("");
   }
 
   function getHealth() {
-    return request<HealthCheckResponse>("/health");
+    return request<HealthCheckResponse>("health");
   }
 
   function getVersion() {
-    return request<VersionInfo>("/api/v1/version");
+    return request<VersionInfo>("version");
   }
 
   // ─── Protected Endpoints ─────────────────────────────────────
 
   function getServiceRegistry() {
-    return request<ServiceRegistryEntry[]>("/api/v1/service-registry");
+    return request<ServiceRegistryEntry[]>("service-registry");
   }
 
-  function searchKnowledge(query: string) {
-    const encoded = encodeURIComponent(query);
-    return request<KnowledgeSearchResponse>(
-      `/api/v1/knowledge/search?q=${encoded}`
+  async function searchKnowledge(
+    query: string,
+    options?: KnowledgeSearchOptions
+  ): Promise<KnowledgeSearchResponse> {
+    const response = await request<BackendKnowledgeSearchResponse>(
+      "knowledge/search",
+      {
+        method: "POST",
+        body: JSON.stringify({ query, ...options }),
+      }
     );
+
+    return {
+      query: response.query,
+      total: response.results.length,
+      results: response.results.map((result) => ({
+        id: result.chunkId,
+        title: result.documentTitle,
+        snippet: result.content,
+        source: result.documentId,
+        relevance: result.score,
+        url: result.sourceUrl,
+      })),
+    };
   }
 
-  function ingestUrl(url: string, options?: { source?: string }) {
-    return request<{ jobId: string }>("/api/v1/ingest/url", {
+  function ingestUrl(
+    url: string,
+    options?: { source?: string; tenantId?: string; projectId?: string }
+  ) {
+    return request<{ jobId: string; documentId?: string }>("ingest/url", {
       method: "POST",
-      body: JSON.stringify({ url, ...options }),
+      body: JSON.stringify({
+        url,
+        sourceName: options?.source,
+        tenantId: options?.tenantId,
+        projectId: options?.projectId,
+      }),
+    });
+  }
+
+  async function ingestFile(
+    file: File,
+    options?: { source?: string; tenantId?: string; projectId?: string }
+  ) {
+    const contentBase64 = await fileToBase64(file);
+    return request<{ jobId: string; documentId?: string }>("ingest/file", {
+      method: "POST",
+      body: JSON.stringify({
+        filename: file.name,
+        contentType: file.type || undefined,
+        contentBase64,
+        sourceName: options?.source,
+        tenantId: options?.tenantId,
+        projectId: options?.projectId,
+      }),
     });
   }
 
   function getJobStatus(jobId: string) {
-    return request<JobStatus>(`/api/v1/jobs/${encodeURIComponent(jobId)}`);
+    return request<JobStatus>(`jobs/${encodeURIComponent(jobId)}`);
+  }
+
+  function getDocument(documentId: string) {
+    return request<DocumentDetailResponse>(
+      `documents/${encodeURIComponent(documentId)}`
+    );
   }
 
   function queryAgentContext(req: AgentContextRequest) {
-    return request<AgentContextResponse>("/api/v1/agent/context", {
+    return request<AgentContextResponse>("agent/context", {
       method: "POST",
       body: JSON.stringify(req),
     });
   }
 
+  // ─── List Endpoints ──────────────────────────────────────────
+
+  function listDocuments(params: {
+    tenantId: string;
+    projectId?: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const qs = new URLSearchParams();
+    qs.set("tenantId", params.tenantId);
+    if (params.projectId) qs.set("projectId", params.projectId);
+    if (params.status) qs.set("status", params.status);
+    if (params.limit) qs.set("limit", String(params.limit));
+    if (params.cursor) qs.set("cursor", params.cursor);
+    return request<DocumentListResponse>(`documents?${qs}`);
+  }
+
+  function listJobs(params: {
+    tenantId: string;
+    projectId?: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const qs = new URLSearchParams();
+    qs.set("tenantId", params.tenantId);
+    if (params.projectId) qs.set("projectId", params.projectId);
+    if (params.status) qs.set("status", params.status);
+    if (params.limit) qs.set("limit", String(params.limit));
+    if (params.cursor) qs.set("cursor", params.cursor);
+    return request<JobListResponse>(`jobs?${qs}`);
+  }
+
+  // ─── API Key Management ────────────────────────────────────
+
+  function listApiKeys(params?: {
+    tenantId?: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const qs = new URLSearchParams();
+    if (params?.tenantId) qs.set("tenantId", params.tenantId);
+    if (params?.status) qs.set("status", params.status);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    return request<ApiKeyListResponse>(`api-keys?${qs}`);
+  }
+
+  function createApiKey(input: {
+    name: string;
+    tenantId?: string;
+    scopes: string[];
+    expiresAt?: string;
+  }) {
+    return request<CreateApiKeyResponse>("api-keys", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  function revokeApiKey(id: string, input?: { reason?: string }) {
+    return request<{ apiKey: ApiKey }>(`api-keys/${encodeURIComponent(id)}/revoke`, {
+      method: "POST",
+      body: input ? JSON.stringify(input) : undefined,
+    });
+  }
+
+  function listAuditLogs(params?: {
+    tenantId?: string;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const qs = new URLSearchParams();
+    if (params?.tenantId) qs.set("tenantId", params.tenantId);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    return request<AuditLogListResponse>(`audit-logs?${qs}`);
+  }
+
   return {
     // Auth
-    setAuth,
-    clearAuth,
-    getToken,
+    getMe,
+
+    // Tenants & Projects
+    listTenants,
+    createTenant,
+    listProjects,
 
     // Public
     getServiceInfo,
@@ -172,8 +343,20 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     getServiceRegistry,
     searchKnowledge,
     ingestUrl,
+    ingestFile,
     getJobStatus,
+    getDocument,
     queryAgentContext,
+
+    // Lists
+    listDocuments,
+    listJobs,
+    listAuditLogs,
+
+    // API Keys
+    listApiKeys,
+    createApiKey,
+    revokeApiKey,
 
     // Raw access for one-off endpoints
     request,

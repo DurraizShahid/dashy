@@ -5,6 +5,7 @@ import { useTheme } from "next-themes"
 
 import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"
+import { useAuth } from "@/lib/auth/use-auth"
 
 interface CRMTopbarProps {
   title: string
@@ -33,6 +34,16 @@ function ThemeToggle() {
 }
 
 export function CRMTopbar({ title, subtitle }: CRMTopbarProps) {
+  const { session } = useAuth()
+
+  const initials = (() => {
+    const name = session?.name || session?.preferredUsername || session?.email || ""
+    if (!name) return "?"
+    const parts = name.split(/[\s.@]+/).filter(Boolean)
+    if (parts.length >= 2) return (parts[0]![0] + parts[1]![0]).toUpperCase()
+    return name.slice(0, 2).toUpperCase()
+  })()
+
   return (
     <div className="flex items-center justify-between px-6 py-3">
       <div>
@@ -66,8 +77,9 @@ export function CRMTopbar({ title, subtitle }: CRMTopbarProps) {
         <div
           className="flex size-8 items-center justify-center rounded-full text-xs font-medium text-white"
           style={{ backgroundColor: "var(--crm-purple)" }}
+          title={session?.name || session?.email || "User"}
         >
-          AJ
+          {initials}
         </div>
       </div>
     </div>
