@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
     sub: idToken.sub ?? tokens.access_token,
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token,
+    idToken: tokens.id_token,
     email: idToken.email,
     name: idToken.name,
     preferredUsername: idToken.preferred_username,

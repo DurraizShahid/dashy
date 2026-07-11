@@ -15,6 +15,7 @@ export interface SessionPayload {
   sub: string;
   accessToken: string;
   refreshToken?: string;
+  idToken?: string;
   email?: string;
   name?: string;
   preferredUsername?: string;

@@ -13,10 +13,13 @@ export async function GET(request: NextRequest) {
 
   if (session && cfg.keycloakUrl && cfg.realm) {
     const logoutUrl = `${cfg.keycloakUrl}/realms/${cfg.realm}/protocol/openid-connect/logout`;
-    const idTokenHint = session.accessToken;
-    return NextResponse.redirect(
-      `${logoutUrl}?id_token_hint=${idTokenHint}&post_logout_redirect_uri=${encodeURIComponent(baseUrl)}`
-    );
+    const params = new URLSearchParams({
+      post_logout_redirect_uri: baseUrl,
+    });
+    if (session.idToken) {
+      params.set("id_token_hint", session.idToken);
+    }
+    return NextResponse.redirect(`${logoutUrl}?${params.toString()}`);
   }
 
   return response;
