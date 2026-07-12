@@ -22,9 +22,17 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       token = await authResult.getToken();
     }
   } catch (err) {
-    console.error("[hive-mind-proxy] Auth failed:", err);
+    const errMessage = err instanceof Error ? err.message : String(err);
+    const errStack = err instanceof Error ? err.stack : undefined;
+    console.error("[hive-mind-proxy] Auth failed:", {
+      error: errMessage,
+      stack: errStack,
+      clerkSecretKeySet: !!process.env.CLERK_SECRET_KEY,
+      clerkSecretKeyPrefix: process.env.CLERK_SECRET_KEY?.slice(0, 7),
+      backendUrl: BACKEND_BASE,
+    });
     return NextResponse.json(
-      { error: "Auth unavailable", message: "Authentication service is temporarily unavailable" },
+      { error: "Auth unavailable", message: errMessage },
       { status: 503 }
     );
   }
