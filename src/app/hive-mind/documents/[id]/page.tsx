@@ -12,13 +12,18 @@ import {
   ArrowLeft,
   FileText,
   RefreshCw,
+  Globe,
+  ExternalLink,
+  Hash,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const statusStyles: Record<string, string> = {
   pending: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  ingesting: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
   processing: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
   indexed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  completed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   failed: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
@@ -72,6 +77,13 @@ export default function HiveMindDocumentDetailPage({
     };
   }, [client, id, refreshKey]);
 
+  function handleRefresh() {
+    setLoading(true);
+    setError(null);
+    setDoc(null);
+    setRefreshKey((k) => k + 1);
+  }
+
   return (
     <>
       <CRMTopbar
@@ -102,12 +114,7 @@ export default function HiveMindDocumentDetailPage({
               <div>
                 <p className="text-sm text-muted-foreground">{error}</p>
                 <button
-                  onClick={() => {
-                    setLoading(true);
-                    setError(null);
-                    setDoc(null);
-                    setRefreshKey((k) => k + 1);
-                  }}
+                  onClick={handleRefresh}
                   className="inline-flex items-center gap-1 mt-2 text-sm font-medium text-primary hover:underline"
                 >
                   <RefreshCw className="size-3.5" />
@@ -120,7 +127,7 @@ export default function HiveMindDocumentDetailPage({
 
         {doc && !loading && (
           <div className="space-y-4">
-            {/* Metadata */}
+            {/* Header */}
             <div className="rounded-[20px] bg-card p-6 shadow-card">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -143,22 +150,37 @@ export default function HiveMindDocumentDetailPage({
                   >
                     {doc.status}
                   </span>
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize",
-                      sensitivityStyles[doc.sensitivityLevel ?? ""]
-                    )}
-                  >
-                    {doc.sensitivityLevel}
-                  </span>
+                  {doc.sensitivityLevel && (
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize",
+                        sensitivityStyles[doc.sensitivityLevel]
+                      )}
+                    >
+                      {doc.sensitivityLevel}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-xs text-muted-foreground">Source</p>
-                  <p className="text-foreground">{doc.source?.name ?? doc.sourceId ?? "—"}</p>
+              {/* Source URL */}
+              {doc.sourceUrl && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 mb-4">
+                  <Globe className="size-4 shrink-0 text-muted-foreground" />
+                  <a
+                    href={doc.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline truncate flex-1"
+                  >
+                    {doc.sourceUrl}
+                  </a>
+                  <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
                 </div>
+              )}
+
+              {/* Metadata grid */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-xs text-muted-foreground">Type</p>
                   <p className="text-foreground">{doc.documentType}</p>
@@ -168,24 +190,116 @@ export default function HiveMindDocumentDetailPage({
                   <p className="text-foreground capitalize">{doc.visibilityScope ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Chunks</p>
-                  <p className="text-foreground">{doc.chunkCount}</p>
+                  <p className="text-xs text-muted-foreground">Source</p>
+                  <p className="text-foreground">{doc.source?.name ?? doc.sourceId ?? "—"}</p>
                 </div>
+                {doc.qdrantCollection && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Collection</p>
+                    <p className="text-foreground">
+                      <code className="text-xs">{doc.qdrantCollection}</code>
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Chunks & Indexing */}
+            <div className="rounded-[20px] bg-card p-6 shadow-card">
+              <h3 className="font-poppins font-semibold text-foreground mb-3">
+                Chunks & Indexing
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex items-center gap-2">
+                  <Hash className="size-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Chunks</p>
+                    <p className="text-sm font-medium text-foreground">{doc.chunkCount}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Hash className="size-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Indexed</p>
+                    <p className="text-sm font-medium text-foreground">{doc.indexedChunkCount}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Hash className="size-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Vectors</p>
+                    <p className="text-sm font-medium text-foreground">{doc.vectorCount ?? "—"}</p>
+                  </div>
+                </div>
+              </div>
+              {doc.chunkCount > 0 && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>Indexing progress</span>
+                    <span>{doc.indexedChunkCount}/{doc.chunkCount}</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all"
+                      style={{
+                        width: `${doc.chunkCount > 0 ? (doc.indexedChunkCount / doc.chunkCount) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Timestamps */}
+            <div className="rounded-[20px] bg-card p-6 shadow-card">
+              <h3 className="font-poppins font-semibold text-foreground mb-3">
+                Timing
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Created</p>
-                  <p className="text-foreground">
+                  <p className="text-sm text-foreground">
                     {doc.createdAt ? new Date(doc.createdAt).toLocaleString() : "—"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Updated</p>
-                  <p className="text-foreground">
+                  <p className="text-sm text-foreground">
                     {doc.updatedAt ? new Date(doc.updatedAt).toLocaleString() : "—"}
                   </p>
                 </div>
+                {doc.processedAt && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Processed</p>
+                    <p className="text-sm text-foreground">
+                      {new Date(doc.processedAt).toLocaleString()}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* Parse Error */}
+            {doc.parseError && (
+              <div className="rounded-[20px] bg-card p-6 shadow-card">
+                <h3 className="font-poppins font-semibold text-foreground mb-2">
+                  Parse Error
+                </h3>
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 p-3">
+                  <p className="text-sm text-muted-foreground">{doc.parseError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Summary */}
+            {doc.summary && (
+              <div className="rounded-[20px] bg-card p-6 shadow-card">
+                <h3 className="font-poppins font-semibold text-foreground mb-2">
+                  Summary
+                </h3>
+                <p className="text-sm text-muted-foreground">{doc.summary}</p>
+              </div>
+            )}
           </div>
         )}
       </div>

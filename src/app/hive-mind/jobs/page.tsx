@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import type { HiveMindJob } from "@/lib/hive-mind/types";
+import { PipelineVisual } from "@/components/hive-mind/pipeline-visual";
 import {
   Loader2,
   XCircle,
@@ -36,6 +37,8 @@ const statusStyles: Record<string, string> = {
   cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
+const POLL_INTERVAL = 5000;
+
 export default function HiveMindJobsPage() {
   const {
     client,
@@ -50,6 +53,7 @@ export default function HiveMindJobsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [manualId, setManualId] = useState("");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchJobs = useCallback(
     async (cursor?: string) => {
@@ -86,6 +90,21 @@ export default function HiveMindJobsPage() {
     }
   }, [fetchJobs, selectedTenantId]);
 
+  // Auto-poll when there are active jobs
+  useEffect(() => {
+    const hasActiveJobs = jobs.some(
+      (j) => j.status === "pending" || j.status === "running"
+    );
+    if (hasActiveJobs && !loading) {
+      pollRef.current = setInterval(() => {
+        fetchJobs();
+      }, POLL_INTERVAL);
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [jobs, loading, fetchJobs]);
+
   return (
     <>
       <CRMTopbar
@@ -121,7 +140,7 @@ export default function HiveMindJobsPage() {
             </select>
           </div>
 
-          {/* Manual lookup (debug/advanced) */}
+          {/* Manual lookup */}
           <div className="flex items-center gap-2 ml-auto">
             <Search className="size-3.5 text-muted-foreground" />
             <input
@@ -175,8 +194,14 @@ export default function HiveMindJobsPage() {
           <div className="rounded-[20px] bg-card p-6 shadow-card text-center">
             <CheckCircle2 className="size-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
-              No jobs found.
+              No jobs found. Ingest some content to see jobs here.
             </p>
+            <Link
+              href="/hive-mind/ingest"
+              className="inline-flex items-center gap-2 mt-3 h-8 px-3 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Ingest Content
+            </Link>
           </div>
         )}
 
@@ -191,7 +216,7 @@ export default function HiveMindJobsPage() {
                   href={`/hive-mind/jobs/${job.id}`}
                   className="rounded-xl bg-card p-4 shadow-card hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <Icon
                         className={cn(
@@ -208,17 +233,29 @@ export default function HiveMindJobsPage() {
                           {job.jobType}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[11px] text-muted-foreground">
-                            Stage: {job.stage}
-                          </span>
                           {job.documentId && (
                             <span className="text-[11px] text-muted-foreground">
-                              &middot; Doc: {job.documentId.slice(0, 8)}
+                              Doc: {job.documentId.slice(0, 8)}
+                            </span>
+                          )}
+                          {job.startedAt && job.completedAt && (
+                            <span className="text-[11px] text-muted-foreground">
+                              &middot; {(() => {
+                                const ms = new Date(job.completedAt).getTime() - new Date(job.startedAt).getTime();
+                                if (ms < 1000) return `${ms}ms`;
+                                if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+                                return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+                              })()}
                             </span>
                           )}
                           <span className="text-[11px] text-muted-foreground">
-                            &middot; {new Date(job.createdAt).toLocaleString()}
+                            {new Date(job.createdAt).toLocaleString()}
                           </span>
+                          {job.error && (
+                            <span className="text-[11px] text-destructive truncate max-w-[200px]">
+                              {job.error}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -235,7 +272,8 @@ export default function HiveMindJobsPage() {
                     </div>
                   </div>
 
-                {/* No progress bar — backend doesn't return progress */}
+                  {/* Pipeline visual */}
+                  <PipelineVisual stage={job.stage} status={job.status} />
                 </Link>
               );
             })}

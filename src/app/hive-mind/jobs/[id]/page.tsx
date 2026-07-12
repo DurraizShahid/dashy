@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useRef } from "react";
 import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { AuthGate } from "@/components/auth/auth-gate";
 import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
+import { PipelineVisual } from "@/components/hive-mind/pipeline-visual";
 import {
   Loader2,
   XCircle,
@@ -36,6 +37,8 @@ const statusStyles: Record<string, string> = {
   cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
+const POLL_INTERVAL = 3000;
+
 export default function HiveMindJobDetailPage({
   params,
 }: {
@@ -47,15 +50,20 @@ export default function HiveMindJobDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!client) return;
     let cancelled = false;
 
-    client
-      .getJobStatus(id)
-      .then((data) => { if (!cancelled) setJob(data); })
-      .catch((err) => {
+    (async () => {
+      try {
+        const data = await client.getJobStatus(id);
+        if (!cancelled) {
+          setJob(data);
+          setError(null);
+        }
+      } catch (err) {
         if (!cancelled) {
           if (err instanceof HiveMindApiError) {
             setError(`API error ${err.status}: ${err.statusText}`);
@@ -65,16 +73,33 @@ export default function HiveMindJobDetailPage({
             setError(err instanceof Error ? err.message : "Unknown error");
           }
         }
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [client, id, refreshKey]);
 
+  // Auto-poll for active jobs
+  useEffect(() => {
+    if (!job) return;
+    const isActive = job.status === "pending" || job.status === "running";
+    if (isActive) {
+      pollRef.current = setInterval(() => {
+        setRefreshKey((k) => k + 1);
+      }, POLL_INTERVAL);
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.status]);
+
   function handleRefresh() {
-    setLoading(true);
-    setError(null);
-    setJob(null);
+    if (pollRef.current) clearInterval(pollRef.current);
     setRefreshKey((k) => k + 1);
   }
 
@@ -83,8 +108,8 @@ export default function HiveMindJobDetailPage({
   return (
     <>
       <CRMTopbar
-        title={id ? `Job ${id.slice(0, 8)}` : "Job Detail"}
-        subtitle="View job status and results"
+        title={job ? `${job.jobType}` : id ? `Job ${id.slice(0, 8)}` : "Job Detail"}
+        subtitle="View job status and pipeline progress"
       />
 
       <div className="px-6 pb-6 max-w-2xl">
@@ -127,71 +152,165 @@ export default function HiveMindJobDetailPage({
           )}
 
           {job && !loading && (
-            <div className="rounded-[20px] bg-card p-6 shadow-card space-y-4">
+            <div className="space-y-4">
               {/* Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Icon
-                    className={cn(
-                      "size-6",
-                      job.status === "completed" && "text-green-600",
-                      job.status === "failed" && "text-destructive",
-                      job.status === "running" && "text-amber-500",
-                      job.status === "pending" && "text-blue-500",
-                      job.status === "cancelled" && "text-muted-foreground"
-                    )}
-                  />
-                  <div>
-                    <h2 className="font-poppins font-semibold text-foreground">
-                      {job.jobType}
-                    </h2>
-                    <p className="text-xs text-muted-foreground">
-                      ID: <code className="text-xs">{job.id}</code>
-                    </p>
+              <div className="rounded-[20px] bg-card p-6 shadow-card">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <Icon
+                      className={cn(
+                        "size-6",
+                        job.status === "completed" && "text-green-600",
+                        job.status === "failed" && "text-destructive",
+                        job.status === "running" && "text-amber-500",
+                        job.status === "pending" && "text-blue-500",
+                        job.status === "cancelled" && "text-muted-foreground"
+                      )}
+                    />
+                    <div>
+                      <h2 className="font-poppins font-semibold text-foreground">
+                        {job.jobType}
+                      </h2>
+                      <p className="text-xs text-muted-foreground">
+                        ID: <code className="text-xs">{job.id}</code>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium capitalize",
+                        statusStyles[job.status]
+                      )}
+                    >
+                      {job.status}
+                    </span>
+                    <button
+                      onClick={handleRefresh}
+                      className="flex size-7 items-center justify-center rounded-lg border border-input text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      title="Refresh"
+                    >
+                      <RefreshCw className="size-3.5" />
+                    </button>
                   </div>
                 </div>
-                <span
-                  className={cn(
-                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium capitalize",
-                    statusStyles[job.status]
-                  )}
-                >
-                  {job.status}
-                </span>
+
+                {/* Pipeline visual */}
+                <PipelineVisual stage={job.stage} status={job.status} />
               </div>
 
-              {/* Details Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Created</p>
-                  <p className="text-sm text-foreground">
-                    {job.createdAt ? new Date(job.createdAt).toLocaleString() : "—"}
-                  </p>
+              {/* Details */}
+              <div className="rounded-[20px] bg-card p-6 shadow-card">
+                <h3 className="font-poppins font-semibold text-foreground mb-3">
+                  Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Stage</p>
+                    <p className="text-sm text-foreground font-medium">
+                      {job.stage ?? "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Attempts</p>
+                    <p className="text-sm text-foreground">
+                      {job.attempts ?? 0}
+                    </p>
+                  </div>
+                  {job.documentId && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Document</p>
+                      <Link
+                        href={`/hive-mind/documents/${job.documentId}`}
+                        className="text-sm text-primary hover:underline font-medium"
+                      >
+                        {job.documentId.slice(0, 8)}...
+                      </Link>
+                    </div>
+                  )}
+                  {job.sourceId && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Source</p>
+                      <p className="text-sm text-foreground">
+                        <code className="text-xs">{job.sourceId.slice(0, 8)}...</code>
+                      </p>
+                    </div>
+                  )}
+                  {job.rawObjectId && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Raw Object</p>
+                      <p className="text-sm text-foreground">
+                        <code className="text-xs">{job.rawObjectId.slice(0, 8)}...</code>
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Updated</p>
-                  <p className="text-sm text-foreground">
-                    {job.updatedAt ? new Date(job.updatedAt).toLocaleString() : "—"}
-                  </p>
+              </div>
+
+              {/* Timestamps */}
+              <div className="rounded-[20px] bg-card p-6 shadow-card">
+                <h3 className="font-poppins font-semibold text-foreground mb-3">
+                  Timing
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Created</p>
+                    <p className="text-sm text-foreground">
+                      {job.createdAt ? new Date(job.createdAt).toLocaleString() : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Started</p>
+                    <p className="text-sm text-foreground">
+                      {job.startedAt ? new Date(job.startedAt).toLocaleString() : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Completed</p>
+                    <p className="text-sm text-foreground">
+                      {job.completedAt ? new Date(job.completedAt).toLocaleString() : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Updated</p>
+                    <p className="text-sm text-foreground">
+                      {job.updatedAt ? new Date(job.updatedAt).toLocaleString() : "—"}
+                    </p>
+                  </div>
+                  {job.completedAt && job.startedAt && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Duration</p>
+                      <p className="text-sm text-foreground">
+                        {(() => {
+                          const ms = new Date(job.completedAt).getTime() - new Date(job.startedAt).getTime();
+                          if (ms < 1000) return `${ms}ms`;
+                          if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+                          return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+                        })()}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Error */}
               {job.error && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 p-3">
-                  <p className="text-xs font-medium text-destructive mb-1">
+                <div className="rounded-[20px] bg-card p-6 shadow-card">
+                  <h3 className="font-poppins font-semibold text-foreground mb-2">
                     Error
-                  </p>
-                  <p className="text-sm text-muted-foreground">{job.error}</p>
+                  </h3>
+                  <div className="rounded-xl bg-red-50 dark:bg-red-950/20 p-3">
+                    <p className="text-sm text-muted-foreground">{job.error}</p>
+                  </div>
                 </div>
               )}
 
               {/* Output */}
               {job.output !== undefined && job.output !== null && (
-                <div>
-                  <p className="text-xs font-medium text-foreground mb-1">
+                <div className="rounded-[20px] bg-card p-6 shadow-card">
+                  <h3 className="font-poppins font-semibold text-foreground mb-2">
                     Output
-                  </p>
+                  </h3>
                   <pre className="text-xs bg-muted rounded-xl p-3 overflow-x-auto text-muted-foreground">
                     {JSON.stringify(job.output, null, 2)}
                   </pre>

@@ -18,8 +18,10 @@ import { cn } from "@/lib/utils";
 
 const statusStyles: Record<string, string> = {
   pending: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  ingesting: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
   processing: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
   indexed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  completed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   failed: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
@@ -98,8 +100,10 @@ export default function HiveMindDocumentsPage() {
           >
             <option value="">All statuses</option>
             <option value="pending">Pending</option>
+            <option value="ingesting">Ingesting</option>
             <option value="processing">Processing</option>
             <option value="indexed">Indexed</option>
+            <option value="completed">Completed</option>
             <option value="failed">Failed</option>
           </select>
           <button
@@ -145,8 +149,14 @@ export default function HiveMindDocumentsPage() {
           <div className="rounded-[20px] bg-card p-6 shadow-card text-center">
             <FileText className="size-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
-              No documents found.
+              No documents found. Ingest some content to get started.
             </p>
+            <Link
+              href="/hive-mind/ingest"
+              className="inline-flex items-center gap-2 mt-3 h-8 px-3 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Ingest Content
+            </Link>
           </div>
         )}
 
@@ -178,18 +188,23 @@ export default function HiveMindDocumentsPage() {
                         <span className="text-[11px] text-muted-foreground">
                           &middot; {doc.chunkCount} chunks
                         </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          &middot; {new Date(doc.updatedAt).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-3">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-                        sensitivityStyles[doc.sensitivityLevel ?? ""]
-                      )}
-                    >
-                      {doc.sensitivityLevel}
-                    </span>
+                    {doc.sensitivityLevel && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+                          sensitivityStyles[doc.sensitivityLevel]
+                        )}
+                      >
+                        {doc.sensitivityLevel}
+                      </span>
+                    )}
                     <span
                       className={cn(
                         "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
