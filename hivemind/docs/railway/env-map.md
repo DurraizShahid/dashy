@@ -5,7 +5,7 @@
 ### hivemind-api / hivemind-worker
 | Variable | Value Type | Source |
 |----------|-----------|--------|
-| DATABASE_URL | Postgres URL | Postgres (Keycloak's) |
+| DATABASE_URL | Postgres URL | Postgres |
 | REDIS_URL | Redis URL | Redis-9dW0 (DB 2) |
 | QDRANT_URL | HTTP URL | qdrant.railway.internal:6333 |
 | MINIO_ENDPOINT | HTTP URL | minio.railway.internal:9000 |
@@ -20,16 +20,12 @@
 | CRAWL4AI_URL | HTTP URL | crawl4ai.railway.internal:11235 |
 | ARCHIVEBOX_URL | HTTP URL | archivebox.railway.internal:8000 |
 | RAGFLOW_URL | HTTP URL | ragflow.railway.internal:80 |
-| KEYCLOAK_URL | HTTP URL | keycloak.railway.internal:8080 |
-| KEYCLOAK_ISSUER_URL | HTTPS URL | keycloak up.railway.app/realms/hivemind |
-| KEYCLOAK_CLIENT_ID | string | hivemind-api |
-| KEYCLOAK_AUDIENCE | string | hivemind-api |
 | PAPERLESS_URL | HTTP URL | paperless-ngx.railway.internal:8000 |
 | PERPLEXICA_URL | HTTP URL | perplexica.railway.internal:3000 |
 | SEARXNG_URL | HTTP URL | searxng-railway.railway.internal:8080 |
 | WORLD_MONITOR_URL | HTTP URL | app.railway.internal:80 |
 | HIVEMIND_API_KEY | secret | API auth |
-| AUTH_MODE | enum | hybrid |
+| AUTH_MODE | enum | api-key |
 | EMBEDDING_PROVIDER | string | openai |
 | EMBEDDING_MODEL | string | text-embedding-3-small |
 | EMBEDDING_DIMENSIONS | number | 1536 |
@@ -91,23 +87,13 @@
 | NEO4J_PLUGINS | JSON array | apoc |
 | NEO4J_db_logs_query_transaction_enabled | string | VERBOSE |
 
-### Keycloak
-| Variable | Value Type | Notes |
-|----------|-----------|-------|
-| KC_DB | string | postgres |
-| KC_DB_URL | JDBC URL | postgres.railway.internal:5432 |
-| KC_DB_USERNAME | string | postgres |
-| KC_DB_PASSWORD | secret | Postgres |
-| KEYCLOAK_ADMIN | string | — |
-| KEYCLOAK_ADMIN_PASSWORD | secret | — |
-
 ## Placeholder Variables (not yet known)
 
 The following env names are proposed for the new Hive Mind monorepo. Exact names may vary until the implementation phase.
 
 | Proposed Variable | Purpose | Status |
 |------------------|---------|--------|
-| DATABASE_URL | Hive Mind metadata Postgres | Uses Keycloak's Postgres currently |
+| DATABASE_URL | Hive Mind metadata Postgres | Defined |
 | REDIS_URL | Hive Mind queue/cache | Uses Redis-9dW0 DB 2 |
 | QDRANT_URL | Vector DB endpoint | Defined |
 | MINIO_ENDPOINT | Object storage endpoint | Defined |
@@ -121,7 +107,6 @@ The following env names are proposed for the new Hive Mind monorepo. Exact names
 | CRAWL4AI_URL | Web crawling service | Defined |
 | ARCHIVEBOX_URL | Web archiving service | Defined |
 | RAGFLOW_URL | RAGFlow document AI | Defined |
-| KEYCLOAK_URL | Auth service | Defined |
 | PAPERLESS_URL | Document management | Defined |
 | PERPLEXICA_URL | AI search | Defined |
 | SEARXNG_URL | Meta search | Defined |

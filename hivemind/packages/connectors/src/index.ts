@@ -14,4 +14,3 @@ export { checkPaperlessHealth } from './paperless';
 export { checkSearXNGHealth } from './searxng';
 export { checkPerplexicaHealth } from './perplexica';
 export { checkWorldMonitorHealth } from './world-monitor';
-export { checkKeycloakHealth } from './keycloak';

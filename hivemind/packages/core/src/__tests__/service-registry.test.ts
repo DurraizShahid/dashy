@@ -9,7 +9,6 @@ describe('serviceRegistry', () => {
     expect(keys).toContain('minio_storage');
     expect(keys).toContain('qdrant');
     expect(keys).toContain('neo4j');
-    expect(keys).toContain('keycloak');
     expect(keys).toContain('graphiti');
     expect(keys).toContain('docling');
     expect(keys).toContain('crawl4ai');
@@ -42,7 +41,6 @@ describe('serviceRegistry', () => {
     expect(requiredKeys).toContain('minio_storage');
     expect(requiredKeys).toContain('qdrant');
     expect(requiredKeys).toContain('neo4j');
-    expect(requiredKeys).toContain('keycloak');
   });
 });
 
@@ -64,7 +62,6 @@ describe('getPublicServices', () => {
   it('should return services with publicExposureRecommended', () => {
     const publicServices = getPublicServices();
     const keys = publicServices.map((s) => s.key);
-    expect(keys).toContain('keycloak');
     expect(keys).toContain('paperless');
     expect(keys).toContain('ragflow');
     expect(keys).toContain('archivebox');

@@ -15,7 +15,6 @@ import {
   checkSearXNGHealth,
   checkPerplexicaHealth,
   checkWorldMonitorHealth,
-  checkKeycloakHealth,
 } from '@hivemind/connectors';
 
 const healthRouter = new Hono();
@@ -64,7 +63,6 @@ healthRouter.get('/', async (c) => {
   checks.searxng = await runHealthCheck('searxng', () => checkSearXNGHealth(env.SEARXNG_URL));
   checks.perplexica = await runHealthCheck('perplexica', () => checkPerplexicaHealth(env.PERPLEXICA_URL));
   checks.world_monitor = await runHealthCheck('world_monitor', () => checkWorldMonitorHealth(env.WORLD_MONITOR_URL));
-  checks.keycloak = await runHealthCheck('keycloak', () => checkKeycloakHealth(env.KEYCLOAK_URL));
 
   const report = aggregateHealth(checks);
   const statusCode = report.status === 'healthy' ? 200 : report.status === 'degraded' ? 200 : 503;

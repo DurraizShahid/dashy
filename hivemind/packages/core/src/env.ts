@@ -38,11 +38,7 @@ export const envSchema = z.object({
   SEARXNG_URL: z.string().url().default('http://searxng-railway.railway.internal:8080'),
   WORLD_MONITOR_URL: z.string().url().default('http://app.railway.internal:80'),
 
-  KEYCLOAK_URL: z.string().url().default('http://keycloak.railway.internal:8080'),
-  KEYCLOAK_ISSUER_URL: z.string().url().optional(),
-  KEYCLOAK_CLIENT_ID: z.string().default('hivemind-api'),
-  KEYCLOAK_AUDIENCE: z.string().default('hivemind-api'),
-  AUTH_MODE: z.enum(['keycloak', 'api-key', 'hybrid']).default('hybrid'),
+  AUTH_MODE: z.enum(['api-key']).default('api-key'),
 
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),

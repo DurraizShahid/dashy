@@ -7,7 +7,7 @@ describe('envSchema', () => {
     expect(result.NODE_ENV).toBe('development');
     expect(result.PORT).toBe(8080);
     expect(result.LOG_LEVEL).toBe('info');
-    expect(result.AUTH_MODE).toBe('hybrid');
+    expect(result.AUTH_MODE).toBe('api-key');
     expect(result.MINIO_BUCKET_RAW).toBe('hivemind-raw');
     expect(result.EMBEDDING_DIMENSIONS).toBe(1536);
     expect(result.RUN_MIGRATIONS_ON_STARTUP).toBe(false);
@@ -32,7 +32,6 @@ describe('envSchema', () => {
     expect(result.GRAPHITI_URL).toBe('http://graphiti.railway.internal:8000');
     expect(result.RAGFLOW_URL).toBe('http://ragflow.railway.internal:80');
     expect(result.PAPERLESS_URL).toBe('http://paperless-ngx.railway.internal:8000');
-    expect(result.KEYCLOAK_URL).toBe('http://keycloak.railway.internal:8080');
   });
 });
 

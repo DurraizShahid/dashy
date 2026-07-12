@@ -25,7 +25,7 @@ export const serviceRegistry: ServiceEntry[] = [
     defaultInternalUrl: 'postgresql://postgres:password@postgres.railway.internal:5432/railway',
     publicExposureRecommended: false,
     healthCheckType: 'postgres',
-    notes: 'Shared with Keycloak until separate Hive Mind DB is provisioned',
+    notes: 'Primary metadata database',
   },
   {
     key: 'redis_queue',
@@ -74,18 +74,6 @@ export const serviceRegistry: ServiceEntry[] = [
     publicExposureRecommended: false,
     healthCheckType: 'neo4j',
     notes: 'Graphiti also connects internally. TCP proxy exists for external access',
-  },
-  {
-    key: 'keycloak',
-    displayName: 'Keycloak',
-    category: 'auth',
-    purpose: 'Authentication, SSO, user and realm management',
-    requiredForPhase2: true,
-    envVar: 'KEYCLOAK_URL',
-    defaultInternalUrl: 'http://keycloak.railway.internal:8080',
-    publicExposureRecommended: true,
-    healthCheckType: 'http',
-    notes: 'Realm: hivemind. Provides OIDC tokens for API auth',
   },
   {
     key: 'graphiti',
