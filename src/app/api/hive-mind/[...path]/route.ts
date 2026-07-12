@@ -12,7 +12,22 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   const search = new URL(request.url).search;
   const targetUrl = `${BACKEND_BASE}/api/v1/${backendPath}${search}`;
 
-  const { userId, getToken } = await auth();
+  let userId: string | null = null;
+  let token: string | null = null;
+
+  try {
+    const authResult = await auth();
+    userId = authResult.userId;
+    if (userId) {
+      token = await authResult.getToken();
+    }
+  } catch (err) {
+    console.error("[hive-mind-proxy] Auth failed:", err);
+    return NextResponse.json(
+      { error: "Auth unavailable", message: "Authentication service is temporarily unavailable" },
+      { status: 503 }
+    );
+  }
 
   if (!userId) {
     return NextResponse.json(
@@ -20,8 +35,6 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       { status: 401 }
     );
   }
-
-  const token = await getToken();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
