@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   Users,
@@ -24,6 +25,8 @@ import {
   Bot,
   Key,
   ScrollText,
+  Cog,
+  UsersRound,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth/use-auth"
@@ -51,6 +54,8 @@ const hiveMindItems = [
   { label: "Documents", icon: FolderArchive, href: "/hive-mind/documents" },
   { label: "Jobs", icon: Activity, href: "/hive-mind/jobs" },
   { label: "Agents", icon: Bot, href: "/hive-mind/agents" },
+  { label: "Under the Hood", icon: Cog, href: "/hive-mind/under-the-hood" },
+  { label: "Departments", icon: UsersRound, href: "/hive-mind/departments" },
 ]
 
 const adminItems = [
@@ -58,19 +63,31 @@ const adminItems = [
   { label: "Audit Logs", icon: ScrollText, href: "/hive-mind/admin/audit-logs" },
 ]
 
-interface CRMSidebarProps {
-  activeItem: string
+const allItems = [...navItems, ...hiveMindItems, ...adminItems, { label: "Settings", icon: Settings, href: "/settings" }]
+
+function findActiveHref(pathname: string): string | null {
+  const path = pathname.toLowerCase()
+  let best: string | null = null
+  for (const item of allItems) {
+    const target = item.href.toLowerCase()
+    if (path === target || (target !== "/" && path.startsWith(target + "/"))) {
+      if (!best || item.href.length > best.length) {
+        best = item.href
+      }
+    }
+  }
+  return best
 }
 
-export function CRMSidebar({ activeItem }: CRMSidebarProps) {
+export function CRMSidebar() {
+  const pathname = usePathname()
   const [expanded, setExpanded] = useState(false)
   useAuth()
 
+  const activeHref = useMemo(() => findActiveHref(pathname), [pathname])
+
   function isActive(href: string): boolean {
-    const normalized = href.toLowerCase()
-    const current = activeItem.toLowerCase()
-    if (normalized === "/hive-mind" && (current === "hive-mind" || current === "overview")) return true
-    return normalized.endsWith(current) || current === normalized.replace(/^\//, "")
+    return href.toLowerCase() === activeHref?.toLowerCase()
   }
 
   return (
@@ -193,7 +210,7 @@ export function CRMSidebar({ activeItem }: CRMSidebarProps) {
           className={cn(
             "flex items-center gap-3 rounded-xl text-white transition-colors",
             expanded ? "px-3 py-2.5 w-full" : "h-10 w-10 justify-center",
-            activeItem === "settings" ? "bg-white/15" : "hover:bg-white/10"
+            isActive("/settings") ? "bg-white/15" : "hover:bg-white/10"
           )}
           title="Settings"
         >

@@ -14,7 +14,7 @@ export default function ContactsPage() {
       <div className="h-full py-4 px-4">
         <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
           <div className="flex gap-5 h-full">
-            <CRMSidebar activeItem="contacts" />
+            <CRMSidebar />
 
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0 pr-1">
               <CRMTopbar title="Contacts" subtitle="People and decision-makers" />

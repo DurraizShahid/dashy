@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { CRMSidebar } from "@/components/crm/crm-sidebar";
 import { TenantProjectSelector } from "@/components/hive-mind/tenant-project-selector";
 import { isHiveMindEnabled } from "@/lib/env";
@@ -15,15 +14,12 @@ import {
 } from "lucide-react";
 
 function HiveMindShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const activeItem = pathname.startsWith("/hive-mind") ? "hive-mind" : "dashboard";
-
   return (
     <div className="bg-background h-screen overflow-hidden">
       <div className="h-full py-4 px-4">
         <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
           <div className="flex gap-5 h-full">
-            <CRMSidebar activeItem={activeItem} />
+            <CRMSidebar />
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0 pr-1">
               {/* Tenant/Project selector bar */}
               <div className="flex items-center justify-between px-6 pt-2">
@@ -62,7 +58,7 @@ export default function HiveMindLayout({
         <div className="h-full py-4 px-4">
           <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
             <div className="flex gap-5 h-full">
-              <CRMSidebar activeItem="hive-mind" />
+              <CRMSidebar />
               <div className="flex-1 flex flex-col items-center justify-center text-center">
                 <h2 className="font-poppins text-xl font-semibold text-foreground mb-2">
                   Hive Mind Not Configured

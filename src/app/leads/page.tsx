@@ -47,7 +47,7 @@ export default function LeadsPage() {
       <div className="h-full py-4 px-4">
         <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
           <div className="flex gap-5 h-full">
-            <CRMSidebar activeItem="leads" />
+            <CRMSidebar />
             <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pr-1">
               <CRMTopbar title="All Leads" subtitle="Manage and track all captured leads" />
 

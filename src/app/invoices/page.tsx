@@ -124,7 +124,7 @@ export default function InvoicesPage() {
       <div className="h-full max-w-[1400px] mx-auto py-4 px-4">
         <div className="h-full bg-white rounded-[36px] p-5 shadow-elevated">
           <div className="flex gap-5 h-full">
-            <CRMSidebar activeItem="invoices" />
+            <CRMSidebar />
 
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0 pr-1">
               <CRMTopbar title="Invoices" subtitle="Manage invoices, receipts, and quotations" />
