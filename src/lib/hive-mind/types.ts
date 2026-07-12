@@ -313,6 +313,61 @@ export interface DocumentDetailResponse {
   processedAt?: string | null;
 }
 
+// ─── Graph Memory ─────────────────────────────────────────────────
+
+export interface GraphOverviewResponse {
+  entityCount: number;
+  relationshipCount: number;
+  documentNodeCount: number;
+  topEntities: Array<{ id: string; name: string; entityType: string; mentionCount: number }>;
+  recentDocuments: Array<{ id: string; title: string }>;
+  graphHealth: 'healthy' | 'unhealthy';
+}
+
+export interface GraphEntitySummary {
+  id: string;
+  name: string;
+  entityType: string;
+  mentionCount: number;
+  documentCount: number;
+}
+
+export interface GraphEntitiesResponse {
+  entities: GraphEntitySummary[];
+  nextCursor: string | null;
+}
+
+export interface GraphEntityDetailResponse {
+  entity: {
+    id: string;
+    name: string;
+    entityType: string;
+    metadata: Record<string, unknown>;
+  } | null;
+  relatedEntities: Array<{ id: string; name: string; entityType: string; relationship: string }>;
+  mentionedInDocuments: Array<{ id: string; title: string }>;
+  mentionedInChunks: Array<{ id: string; chunkIndex: number; documentId: string }>;
+}
+
+export interface GraphDocumentDetailResponse {
+  document: {
+    id: string;
+    title: string;
+    tenantId: string;
+    projectId?: string;
+  } | null;
+  entities: Array<{ id: string; name: string; entityType: string }>;
+  chunks: Array<{ id: string; chunkIndex: number }>;
+  relationships: Array<{ fromType: string; fromId: string; toType: string; toId: string; relationship: string }>;
+}
+
+export interface GraphSearchResponse {
+  matchingEntities: Array<{ id: string; name: string; entityType: string; mentionCount: number }>;
+  matchingDocuments: Array<{ id: string; title: string }>;
+  relatedEntities: Array<{ id: string; name: string; entityType: string }>;
+  warnings: string[];
+}
+
 // ─── API Client Configuration ────────────────────────────────────
 
 export interface HiveMindClientConfig {

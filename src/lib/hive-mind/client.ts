@@ -19,6 +19,11 @@ import {
   type ApiKeyListResponse,
   type CreateApiKeyResponse,
   type ApiKey,
+  type GraphOverviewResponse,
+  type GraphEntitiesResponse,
+  type GraphEntityDetailResponse,
+  type GraphDocumentDetailResponse,
+  type GraphSearchResponse,
 } from "./types";
 import {
   HiveMindApiError,
@@ -191,7 +196,7 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
       }
     );
 
-    return {
+  return {
       query: response.query,
       total: response.results.length,
       results: response.results.map((result) => ({
@@ -357,6 +362,54 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     return request<AuditLogListResponse>(`audit-logs?${qs}`);
   }
 
+  // ─── Graph Memory ─────────────────────────────────────────────
+
+  function getGraphOverview(params: { tenantId: string; projectId?: string }) {
+    const qs = new URLSearchParams({ tenantId: params.tenantId });
+    if (params.projectId) qs.set("projectId", params.projectId);
+    return request<GraphOverviewResponse>(`graph/overview?${qs}`);
+  }
+
+  function listGraphEntities(params: {
+    tenantId: string;
+    projectId?: string;
+    search?: string;
+    type?: string;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const qs = new URLSearchParams({ tenantId: params.tenantId });
+    if (params.projectId) qs.set("projectId", params.projectId);
+    if (params.search) qs.set("search", params.search);
+    if (params.type) qs.set("type", params.type);
+    if (params.limit) qs.set("limit", String(params.limit));
+    if (params.cursor) qs.set("cursor", params.cursor);
+    return request<GraphEntitiesResponse>(`graph/entities?${qs}`);
+  }
+
+  function getGraphEntity(entityId: string, params: { tenantId: string; projectId?: string }) {
+    const qs = new URLSearchParams({ tenantId: params.tenantId });
+    if (params.projectId) qs.set("projectId", params.projectId);
+    return request<GraphEntityDetailResponse>(`graph/entities/${encodeURIComponent(entityId)}?${qs}`);
+  }
+
+  function getDocumentGraph(documentId: string, params: { tenantId: string }) {
+    const qs = new URLSearchParams({ tenantId: params.tenantId });
+    return request<GraphDocumentDetailResponse>(`graph/documents/${encodeURIComponent(documentId)}?${qs}`);
+  }
+
+  function searchGraph(params: {
+    tenantId: string;
+    projectId?: string;
+    query: string;
+    limit?: number;
+  }) {
+    return request<GraphSearchResponse>("graph/search", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
   return {
     // Auth
     getMe,
@@ -389,6 +442,13 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     listApiKeys,
     createApiKey,
     revokeApiKey,
+
+    // Graph Memory
+    getGraphOverview,
+    listGraphEntities,
+    getGraphEntity,
+    getDocumentGraph,
+    searchGraph,
 
     // Raw access for one-off endpoints
     request,
