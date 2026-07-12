@@ -58,10 +58,30 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
 
   try {
     const backendResponse = await fetch(targetUrl, { method, headers, body });
-    const responseBody = await backendResponse.text();
+    let responseBody = await backendResponse.text();
+
+    // Sanitize backend error responses — strip stack traces before forwarding
+    if (!backendResponse.ok) {
+      try {
+        const parsed = JSON.parse(responseBody);
+        if (parsed && typeof parsed === "object") {
+          delete parsed.stack;
+          delete parsed.stackTrace;
+          if (parsed.error && typeof parsed.error === "object") {
+            delete parsed.error.stack;
+            delete parsed.error.stackTrace;
+          }
+          responseBody = JSON.stringify(parsed);
+        }
+      } catch {
+        // Not JSON — forward as-is
+      }
+    }
+
     const responseHeaders: Record<string, string> = {
       "Content-Type":
         backendResponse.headers.get("content-type") ?? "application/json",
+      "X-Content-Type-Options": "nosniff",
     };
 
     return new NextResponse(responseBody, {

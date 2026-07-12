@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import type { GraphDocumentDetailResponse } from "@/lib/hive-mind/types";
+import { HiveMindApiError } from "@/lib/hive-mind/errors";
 import {
   FileText,
   Brain,
@@ -36,6 +37,10 @@ export default function GraphDocumentDetailPage() {
       });
       setData(result);
     } catch (e: unknown) {
+      if (e instanceof HiveMindApiError && e.code === "SESSION_EXPIRED") {
+        window.location.href = "/sign-in";
+        return;
+      }
       setError(e instanceof Error ? e.message : "Failed to load document graph");
     } finally {
       setLoading(false);

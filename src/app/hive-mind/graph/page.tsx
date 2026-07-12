@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import type { GraphOverviewResponse } from "@/lib/hive-mind/types";
+import { HiveMindApiError } from "@/lib/hive-mind/errors";
 import {
   ChartNetwork,
   GitBranch,
@@ -41,6 +42,10 @@ export default function GraphOverviewPage() {
       });
       setOverview(data);
     } catch (e: unknown) {
+      if (e instanceof HiveMindApiError && e.code === "SESSION_EXPIRED") {
+        window.location.href = "/sign-in";
+        return;
+      }
       setError(e instanceof Error ? e.message : "Failed to load graph overview");
     } finally {
       setLoading(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
@@ -14,8 +14,10 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HiveMindApiError } from "@/lib/hive-mind/errors";
 
 export default function GraphEntitiesPage() {
   const {
@@ -33,6 +35,21 @@ export default function GraphEntitiesPage() {
   const [typeFilter, setTypeFilter] = useState("");
   const [cursor, setCursor] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
+
+  // Reset filters when tenant changes
+  const prevTenantRef = useRef(selectedTenantId);
+  useEffect(() => {
+    if (prevTenantRef.current !== selectedTenantId) {
+      setSearch("");
+      setTypeFilter("");
+      setCursor(null);
+      setHistory([]);
+      setData(null);
+      setError(null);
+      setLoading(true);
+      prevTenantRef.current = selectedTenantId;
+    }
+  }, [selectedTenantId]);
 
   const fetchEntities = useCallback(async (dir?: "prev") => {
     if (!client || !selectedTenantId) return;
@@ -57,6 +74,10 @@ export default function GraphEntitiesPage() {
         setCursor(result.nextCursor);
       }
     } catch (e: unknown) {
+      if (e instanceof HiveMindApiError && e.code === "SESSION_EXPIRED") {
+        window.location.href = "/sign-in";
+        return;
+      }
       setError(e instanceof Error ? e.message : "Failed to load entities");
     } finally {
       setLoading(false);
@@ -84,6 +105,21 @@ export default function GraphEntitiesPage() {
 
   const hasPrevPage = history.length > 0;
   const hasNextPage = !!data?.nextCursor;
+
+  // Show error as full-page state instead of overlay
+  if (error && !loading) {
+    return (
+      <>
+        <CRMTopbar title="Graph Entities" subtitle="Browse knowledge graph entities" />
+        <div className="px-6 pb-6 space-y-4">
+          <div className="rounded-[20px] bg-card p-6 shadow-card text-center">
+            <AlertTriangle className="size-8 text-amber-500 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -146,13 +182,6 @@ export default function GraphEntitiesPage() {
           )}
         </form>
 
-        {error && (
-          <div className="rounded-[20px] bg-card p-6 shadow-card text-center">
-            <AlertTriangle className="size-8 text-amber-500 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">{error}</p>
-          </div>
-        )}
-
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -181,7 +210,6 @@ export default function GraphEntitiesPage() {
               ))}
             </div>
 
-            {/* Pagination */}
             <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
               <span className="text-xs text-muted-foreground">
                 {data.entities.length} entities
