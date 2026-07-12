@@ -1,53 +1,24 @@
 /**
- * Keycloak / OIDC authentication configuration.
+ * Clerk auth configuration.
  *
- * All values are optional — when unset, the app runs in public-only mode
- * and protected features display a "requires authentication" message.
- *
- * To enable auth, set the following environment variables:
- *   NEXT_PUBLIC_KEYCLOAK_URL        https://keycloak.yourdomain.com
- *   NEXT_PUBLIC_KEYCLOAK_REALM      your-realm
- *   NEXT_PUBLIC_KEYCLOAK_CLIENT_ID  your-client-id
- *   KEYCLOAK_CLIENT_SECRET          (server-only) your-client-secret
+ * This module provides compatibility helpers.
+ * Clerk handles all auth state via its own SDK.
  */
 
 export interface AuthConfig {
-  keycloakUrl?: string;
-  realm?: string;
-  clientId?: string;
+  /** Always true when Clerk is configured */
+  isConfigured: boolean;
 }
 
-export interface ServerAuthConfig extends AuthConfig {
-  clientSecret?: string;
-}
-
-/** Public-safe config — safe to pass to client components. */
-export function getAuthConfig(): AuthConfig {
-  return {
-    keycloakUrl: process.env.NEXT_PUBLIC_KEYCLOAK_URL,
-    realm: process.env.NEXT_PUBLIC_KEYCLOAK_REALM,
-    clientId: process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID,
-  };
-}
-
-/** Server-only config — includes client secret. Never import in client code. */
-export function getServerAuthConfig(): ServerAuthConfig {
-  return {
-    ...getAuthConfig(),
-    clientSecret: process.env.KEYCLOAK_CLIENT_SECRET,
-  };
-}
-
-/** Whether Keycloak auth is fully configured. */
+/** Whether Clerk auth is available. */
 export function isAuthEnabled(): boolean {
-  const cfg = getAuthConfig();
-  return !!(cfg.keycloakUrl && cfg.realm && cfg.clientId);
+  // Clerk is always configured when ClerkProvider is mounted
+  return true;
 }
 
 /**
  * Canonical base URL for redirects.
  * Priority: NEXT_PUBLIC_BASE_URL > NEXT_PUBLIC_APP_URL
- * In production, throws if neither is set (avoids silent localhost redirects).
  */
 export function getBaseUrl(): string {
   const url =

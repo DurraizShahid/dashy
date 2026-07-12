@@ -1,5 +1,8 @@
 # Keycloak Authentication Integration Plan
 
+> **⚠️ DEPRECATED — This plan has been replaced.**
+> As of the Clerk migration (`auth/clerk-frontend-migration` branch, commit `145ad1a`), Dashy uses **Clerk** (`@clerk/nextjs` v7) for authentication. Keycloak/OIDC custom code has been removed. This document is retained for historical reference only.
+
 ## Chosen Approach: Custom OIDC Authorization Code + PKCE
 
 **Decision:** Direct Keycloak OIDC Authorization Code flow with PKCE, using server-side encrypted JWT session cookies. No third-party auth library.

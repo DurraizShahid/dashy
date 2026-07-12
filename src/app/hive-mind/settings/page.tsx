@@ -46,21 +46,6 @@ export default function HiveMindSettingsPage() {
       value: process.env.NEXT_PUBLIC_HIVE_MIND_API_URL,
       ok: hmEnabled,
     },
-    {
-      label: "Keycloak URL",
-      value: process.env.NEXT_PUBLIC_KEYCLOAK_URL,
-      ok: !!process.env.NEXT_PUBLIC_KEYCLOAK_URL,
-    },
-    {
-      label: "Keycloak Realm",
-      value: process.env.NEXT_PUBLIC_KEYCLOAK_REALM,
-      ok: !!process.env.NEXT_PUBLIC_KEYCLOAK_REALM,
-    },
-    {
-      label: "Keycloak Client ID",
-      value: process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID,
-      ok: !!process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID,
-    },
   ];
 
   return (
@@ -118,7 +103,7 @@ export default function HiveMindSettingsPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <InfoRow label="Auth Mode" value="Keycloak OIDC + PKCE" ok={authEnabled} />
+            <InfoRow label="Auth Mode" value="Clerk" ok={authEnabled} />
             <InfoRow
               label="Signed In"
               value={currentUser?.email ?? session?.email ?? (isAuthenticated ? "Yes" : "No")}
@@ -136,7 +121,7 @@ export default function HiveMindSettingsPage() {
             )}
             <InfoRow
               label="Token Storage"
-              value="Server-side HTTP-only session"
+              value="Clerk session (managed by SDK)"
               ok={true}
             />
             <InfoRow
@@ -191,7 +176,7 @@ export default function HiveMindSettingsPage() {
 
           <div className="flex flex-col gap-2">
             <InfoRow label="Proxy Path" value="/api/hive-mind/*" ok={true} />
-            <InfoRow label="Token Location" value="HTTP-only cookie (encrypted)" ok={true} />
+            <InfoRow label="Token Location" value="Clerk session (SDK managed)" ok={true} />
             <InfoRow label="Browser API Key" value="Removed" ok={true} />
             <InfoRow label="localStorage Tokens" value="None" ok={true} />
           </div>
@@ -221,8 +206,8 @@ export default function HiveMindSettingsPage() {
             discovery, and agent context capabilities.
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            Authentication is handled server-side via Keycloak OIDC. The
-            server-side proxy attaches bearer tokens automatically. No
+            Authentication is handled via Clerk. The server-side proxy
+            forwards Clerk session tokens to the backend. No
             secrets are exposed to the browser.
           </p>
         </div>

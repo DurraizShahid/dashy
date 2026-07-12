@@ -119,7 +119,7 @@ export function HiveMindProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       if (err instanceof HiveMindApiError && err.code === "SESSION_EXPIRED") {
-        window.location.href = "/api/auth/logout";
+        window.location.href = "/sign-in";
         return;
       }
       setError(err instanceof Error ? err.message : "Failed to load tenants");

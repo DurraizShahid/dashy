@@ -1,72 +1,75 @@
-# Keycloak Frontend Auth — Current State (Release Candidate v1)
+# Dashy Auth — Current State
 
-## Status: Implemented
+## Overview
 
-Keycloak OIDC Authorization Code + PKCE (S256) flow is fully implemented.
+Dashy uses **Clerk** for user authentication via the official `@clerk/nextjs` SDK.
 
 ## Architecture
 
 ```
-Browser ──► Next.js Route Handler (/api/auth/*) ──► Keycloak
-    │                          │
-    │                    /api/hive-mind/* proxy
-    │                          │
-    └── HTTP-only cookie ──────┘── Bearer token ──► Hive Mind API
+Browser ──► Dashy + Clerk ──► /api/hive-mind/* route handler ──► Hive Mind API
 ```
 
-## Auth Flow
+- **Browser**: Clerk handles sign-in/sign-up via `@clerk/nextjs` components and hooks
+- **Dashy proxy**: `/api/hive-mind/*` uses `auth()` from Clerk to verify the user, then forwards the Clerk session token to the Hive Mind backend
+- **Hive Mind API**: Receives the Bearer token and enforces RBAC
 
-1. User clicks "Sign In" → redirected to `/api/auth/login`
-2. Login route generates PKCE S256 challenge + verifier cookie, redirects to Keycloak
-3. User authenticates with Keycloak → callback to `/api/auth/callback`
-4. Callback verifies state and PKCE verifier cookie (fails if missing), exchanges auth code for tokens, creates encrypted session cookie (`hm_session`), redirects to `/hive-mind`
-5. Session cookie is read by `/api/auth/me` to return session state to client
-6. All `/api/hive-mind/*` requests proxy through server-side handler, which reads session cookie and attaches `Authorization: Bearer` header
+## Components
 
-## Key Design Decisions
+### ClerkProvider
 
-- **Session Encryption**: JWE encrypted with an A256GCM key derived from `SESSION_ENCRYPTION_KEY` (server-only env var)
-- **No Browser Secrets**: Access tokens, refresh tokens never reach the browser
-- **No localStorage**: Session state is read from `/api/auth/me`, not from localStorage
-- **PKCE S256**: Verifier is a 32-byte random base64url string (RFC 7636 compliant); challenge is `base64url(sha256(verifier))`; stored in HTTP-only cookie; callback fails if cookie is missing
-- **State Verification**: Callback strictly verifies `oauth_state` cookie matches; fails if either is missing
-- **Token Refresh**: `/api/auth/refresh` uses refresh token from session cookie to obtain new access tokens
+Wraps the root layout (`src/app/layout.tsx`). Provides Clerk context to all components.
 
-## Client-Side Auth Hook
+### clerkMiddleware (proxy.ts)
 
-`useAuth()` in `src/lib/auth/use-auth.ts`:
-- Calls `/api/auth/me` to check session state
-- Returns `isAuthenticated`, `isLoading`, `session`, `login()`, `logout()`
-- Login/logout redirect to server-side handlers
-- No localStorage token access
+Runs in `proxy.ts` (Next.js 16 convention). Protects all routes except public ones:
+- `/` — public
+- `/login` — public
+- `/sign-in/*` — public
+- `/sign-up/*` — public
+- `/api/health` — public
+- `/hive-mind/*` — protected
+- `/api/hive-mind/*` — protected
 
-## Permission Handling
+### Sign-in / Sign-up Pages
 
-- 401: Session expired — sign in again (layout shows "Authentication Required")
-- 403: Permission denied — specific message per page
-- 404: Not found or inaccessible
-- Backend errors are not exposed as stack traces
+- `src/app/sign-in/[[...sign-in]]/page.tsx`
+- `src/app/sign-up/[[...sign-up]]/page.tsx`
 
-## Env Vars Required
+### AuthGate
 
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_KEYCLOAK_URL` | Keycloak server URL |
-| `NEXT_PUBLIC_KEYCLOAK_REALM` | Keycloak realm name |
-| `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | OIDC client ID |
-| `KEYCLOAK_CLIENT_SECRET` | OIDC client secret (server-only, returned by `getServerAuthConfig()`) |
-| `SESSION_ENCRYPTION_KEY` | Secret for session cookie signing (server-only) |
-| `NEXT_PUBLIC_BASE_URL` | Canonical public URL for OIDC redirects (falls back to `NEXT_PUBLIC_APP_URL`, then localhost:3000) |
+`src/components/auth/auth-gate.tsx` — wraps protected content. Uses Clerk's `useAuth()` and `useUser()`.
 
-## Config API
+### useAuth Hook
 
-- `getAuthConfig()` — public-safe config (keycloakUrl, realm, clientId). Safe for any context.
-- `getServerAuthConfig()` — includes `clientSecret`. Server-only, never imported in client code.
-- `getBaseUrl()` — canonical base URL with fallback chain: `NEXT_PUBLIC_BASE_URL` > `NEXT_PUBLIC_APP_URL` > `http://localhost:3000`
+`src/lib/auth/use-auth.ts` — compatibility wrapper around Clerk:
+- `isAuthenticated` — from `isSignedIn`
+- `isLoading` — from `!isLoaded`
+- `session` — derived from `useUser()`
+- `login()` — redirects to `/sign-in`
+- `logout()` — calls `signOut()`
 
-## API Key Management
+### /api/auth/me
 
-In addition to OIDC auth, the app supports managing Hive Mind API keys:
-- Keys are created, listed, and revoked through the `/api/hive-mind/*` proxy — no API key ever reaches the browser
-- Plaintext key is shown once immediately after creation, never persisted in localStorage/sessionStorage
-- Create/revoke flows use the same server-side session for authorization
+Returns safe user fields:
+- `authenticated`, `userId`, `email`, `name`, `orgId`, `orgRole`
+- Never returns tokens or session internals
+
+## Env Vars
+
+Required:
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk publishable key
+- `CLERK_SECRET_KEY` — Clerk secret key (server-only)
+- `NEXT_PUBLIC_CLERK_SIGN_IN_URL` — `/sign-in`
+- `NEXT_PUBLIC_CLERK_SIGN_UP_URL` — `/sign-up`
+- `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` — `/hive-mind/overview`
+- `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` — `/hive-mind/overview`
+- `HIVE_MIND_API_URL` — server-only backend URL
+
+Removed:
+- `NEXT_PUBLIC_KEYCLOAK_URL`
+- `NEXT_PUBLIC_KEYCLOAK_REALM`
+- `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID`
+- `KEYCLOAK_CLIENT_SECRET`
+- `SESSION_ENCRYPTION_KEY`
+- `NEXT_PUBLIC_HIVE_MIND_API_KEY`
