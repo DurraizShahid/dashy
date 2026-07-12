@@ -4,7 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { AuthGate } from "@/components/auth/auth-gate";
-import { useHiveMindClient } from "@/lib/hive-mind/provider";
+import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import {
   Loader2,
@@ -42,7 +42,7 @@ export default function HiveMindJobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { client } = useHiveMindClient();
+  const { client } = useHiveMind();
   const [job, setJob] = useState<JobStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

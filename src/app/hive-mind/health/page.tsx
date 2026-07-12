@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { HealthStatus } from "@/components/hive-mind/health-status";
-import { useHiveMindClient } from "@/lib/hive-mind/provider";
+import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import { Loader2, XCircle, RefreshCw } from "lucide-react";
 import type { VersionInfo } from "@/lib/hive-mind/types";
 
 export default function HiveMindHealthPage() {
-  const { client } = useHiveMindClient();
+  const { client } = useHiveMind();
   const [version, setVersion] = useState<VersionInfo | null>(null);
   const [versionError, setVersionError] = useState<string | null>(null);
   const [loadingVersion, setLoadingVersion] = useState(true);

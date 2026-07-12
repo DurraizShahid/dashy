@@ -8,7 +8,7 @@ import {
   RefreshCw,
   Loader2,
 } from "lucide-react";
-import { useHiveMindClient } from "@/lib/hive-mind/provider";
+import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import { cn } from "@/lib/utils";
 import type { HealthCheckResponse } from "@/lib/hive-mind/types";
@@ -33,11 +33,11 @@ function getErrorMessage(err: unknown): string {
 }
 
 export function HealthStatus({ className }: HealthStatusProps) {
-  const { client, isReady } = useHiveMindClient();
+  const { client, clientReady } = useHiveMind();
   const [state, setState] = useState<ConnectionState>({ status: "loading" });
 
   useEffect(() => {
-    if (!client || !isReady) return;
+    if (!client || !clientReady) return;
 
     let cancelled = false;
 
@@ -55,7 +55,7 @@ export function HealthStatus({ className }: HealthStatusProps) {
     return () => {
       cancelled = true;
     };
-  }, [client, isReady]);
+  }, [client, clientReady]);
 
   // Early return after all hooks for no-client state
   if (!client) {
