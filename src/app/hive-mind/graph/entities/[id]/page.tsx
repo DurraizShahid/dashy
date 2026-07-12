@@ -48,6 +48,20 @@ export default function GraphEntityDetailPage() {
     fetchEntity();
   }, [fetchEntity]);
 
+  if (!selectedTenantId) {
+    return (
+      <>
+        <CRMTopbar title="Entity" subtitle="No organization selected" />
+        <div className="px-6 pb-6 flex items-center justify-center py-20">
+          <div className="text-center">
+            <Brain className="size-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Select an organization to view entity details</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (loading) {
     return (
       <>
