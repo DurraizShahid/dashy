@@ -5,6 +5,7 @@ import {
   type VersionInfo,
   type ServiceRegistryEntry,
   type KnowledgeSearchResponse,
+  type KnowledgeSearchCitation,
   type JobStatus,
   type AgentContextRequest,
   type AgentContextResponse,
@@ -43,13 +44,23 @@ interface BackendKnowledgeSearchResult {
   documentId: string;
   documentTitle: string;
   content: string;
+  snippet: string;
   score: number;
   sourceUrl?: string;
+  citation: KnowledgeSearchCitation;
+  metadata: Record<string, unknown>;
 }
 
 interface BackendKnowledgeSearchResponse {
   query: string;
   results: BackendKnowledgeSearchResult[];
+  citations: KnowledgeSearchCitation[];
+  qdrantCollection: string;
+  totalLatencyMs: number;
+  embeddingLatencyMs: number;
+  searchLatencyMs: number;
+  minScore: number;
+  warnings: string[];
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -185,12 +196,27 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
       total: response.results.length,
       results: response.results.map((result) => ({
         id: result.chunkId,
+        chunkId: result.chunkId,
+        documentId: result.documentId,
         title: result.documentTitle,
-        snippet: result.content,
+        documentTitle: result.documentTitle,
+        snippet: result.snippet,
+        content: result.content,
         source: result.documentId,
         relevance: result.score,
+        score: result.score,
         url: result.sourceUrl,
+        sourceUrl: result.sourceUrl,
+        citation: result.citation,
+        metadata: result.metadata,
       })),
+      citations: response.citations,
+      qdrantCollection: response.qdrantCollection,
+      totalLatencyMs: response.totalLatencyMs,
+      embeddingLatencyMs: response.embeddingLatencyMs,
+      searchLatencyMs: response.searchLatencyMs,
+      minScore: response.minScore,
+      warnings: response.warnings,
     };
   }
 

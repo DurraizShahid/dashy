@@ -39,19 +39,41 @@ export interface ServiceRegistryEntry {
   metadata?: Record<string, string>;
 }
 
+export interface KnowledgeSearchCitation {
+  documentId: string;
+  documentTitle: string;
+  chunkId: string;
+  sourceUrl?: string;
+}
+
 export interface KnowledgeSearchResult {
   id: string;
+  chunkId: string;
+  documentId: string;
   title: string;
+  documentTitle: string;
   snippet: string;
+  content: string;
   source: string;
   relevance: number;
+  score: number;
   url?: string;
+  sourceUrl?: string;
+  citation: KnowledgeSearchCitation;
+  metadata: Record<string, unknown>;
 }
 
 export interface KnowledgeSearchResponse {
   results: KnowledgeSearchResult[];
   total: number;
   query: string;
+  citations: KnowledgeSearchCitation[];
+  qdrantCollection: string;
+  totalLatencyMs: number;
+  embeddingLatencyMs: number;
+  searchLatencyMs: number;
+  minScore: number;
+  warnings: string[];
 }
 
 export interface JobStatus {
@@ -93,20 +115,24 @@ export interface AgentContextRelevantChunk {
   chunkId: string;
   documentId: string;
   documentTitle: string;
+  content: string;
   snippet: string;
   score: number;
-  citation: string;
+  citation: KnowledgeSearchCitation;
 }
 
 export interface AgentContextResponse {
   mission: string;
   relevantDocuments: AgentContextRelevantDocument[];
   relevantChunks: AgentContextRelevantChunk[];
-  citations: string[];
+  citations: KnowledgeSearchCitation[];
   retrievalSummary: string;
   warnings: string[];
   qdrantCollection: string;
   totalLatencyMs: number;
+  embeddingLatencyMs: number;
+  searchLatencyMs: number;
+  minScore: number;
 }
 
 // ─── Auth / /me Types ──────────────────────────────────────────
