@@ -30,11 +30,11 @@ export default function HiveMindAuditLogsPage() {
           cursor,
         });
         if (cursor) {
-          setLogs((prev) => [...prev, ...res.logs]);
+          setLogs((prev) => [...prev, ...res.auditLogs]);
         } else {
-          setLogs(res.logs);
+          setLogs(res.auditLogs);
         }
-        setNextCursor(res.nextCursor);
+        setNextCursor(res.nextCursor ?? undefined);
       } catch (err) {
         if (err instanceof HiveMindApiError) {
           if (err.status === 403) setError("You do not have permission to view audit logs.");
@@ -111,10 +111,10 @@ export default function HiveMindAuditLogsPage() {
                       </span>
                       <ArrowRight className="size-3 text-muted-foreground shrink-0" />
                       <span className="text-xs text-muted-foreground">
-                        {entry.targetType}
+                        {entry.resourceType}
                       </span>
                       <code className="text-[11px] text-muted-foreground">
-                        {entry.targetId.slice(0, 8)}
+                        {(entry.resourceId ?? "").slice(0, 8)}
                       </code>
                     </div>
                   </div>

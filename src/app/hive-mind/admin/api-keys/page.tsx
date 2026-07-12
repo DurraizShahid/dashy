@@ -408,7 +408,7 @@ export default function HiveMindApiKeysPage() {
         } else {
           setApiKeys(res.apiKeys);
         }
-        setNextCursor(res.nextCursor);
+        setNextCursor(res.nextCursor ?? undefined);
       } catch (err) {
         if (err instanceof HiveMindApiError) {
           if (err.status === 403) setError("You do not have permission to manage API keys.");

@@ -56,108 +56,178 @@ export interface KnowledgeSearchResponse {
 
 export interface JobStatus {
   id: string;
-  type: string;
-  status: "pending" | "running" | "completed" | "failed" | "cancelled";
-  progress: number;
-  createdAt: string;
-  updatedAt: string;
-  result?: unknown;
-  error?: string;
+  jobType: string;
+  status: string;
+  stage?: string | null;
+  documentId?: string | null;
+  sourceId?: string | null;
+  rawObjectId?: string | null;
+  queueJobId?: string | null;
+  input?: unknown;
+  output?: unknown;
+  error?: string | null;
+  attempts?: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface AgentContextRequest {
   query: string;
-  context?: Record<string, string>;
+  tenantId?: string;
+  projectId?: string;
+  scope?: string;
+  maxResults?: number;
+  includeGraph?: boolean;
+}
+
+export interface AgentContextRelevantDocument {
+  documentId: string;
+  title: string;
+  sourceUrl: string | null;
+  topScore: number;
+}
+
+export interface AgentContextRelevantChunk {
+  chunkId: string;
+  documentId: string;
+  documentTitle: string;
+  snippet: string;
+  score: number;
+  citation: string;
 }
 
 export interface AgentContextResponse {
-  answer: string;
-  sources: string[];
-  confidence: number;
+  mission: string;
+  relevantDocuments: AgentContextRelevantDocument[];
+  relevantChunks: AgentContextRelevantChunk[];
+  citations: string[];
+  retrievalSummary: string;
+  warnings: string[];
+  qdrantCollection: string;
+  totalLatencyMs: number;
 }
 
-// ─── New Backend API Types ──────────────────────────────────────
+// ─── Auth / /me Types ──────────────────────────────────────────
+
+export interface MeUserInfo {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  keycloakSubject?: string;
+  clerkSubject?: string | null;
+  status: "active" | "inactive" | "suspended";
+}
+
+export interface MeServiceAccountInfo {
+  id: string;
+  name: string;
+  tenantId?: string | null;
+  scopes: string[];
+}
+
+export interface MeTenantMembership {
+  id: string;
+  slug: string;
+  name: string;
+  role: "owner" | "admin" | "manager" | "member" | "viewer";
+  status: "active" | "suspended" | "archived";
+}
+
+export interface MeProjectMembership {
+  id: string;
+  tenantId: string;
+  slug: string;
+  name: string;
+  role: "owner" | "admin" | "manager" | "member" | "viewer";
+  status: "active" | "archived" | "deleted";
+}
 
 export interface MeResponse {
-  id: string;
-  email: string;
-  name?: string;
-  actorType: "user" | "system" | "agent";
-  createdAt: string;
+  actorType: "user" | "agent" | "system" | "api";
+  user?: MeUserInfo;
+  serviceAccount?: MeServiceAccountInfo;
+  systemRoles: string[];
+  tenants: MeTenantMembership[];
+  projects: MeProjectMembership[];
 }
+
+// ─── Tenant & Project (list endpoints) ─────────────────────────
 
 export interface Tenant {
   id: string;
-  name: string;
   slug: string;
-  createdAt: string;
-  projectCount?: number;
-  memberCount?: number;
+  name: string;
+  status: "active" | "suspended" | "archived";
+  role: "owner" | "admin" | "manager" | "member" | "viewer";
+  projectCount: number;
+  documentCount: number;
 }
 
 export interface Project {
   id: string;
-  name: string;
-  slug: string;
   tenantId: string;
-  createdAt: string;
-  description?: string;
-  documentCount?: number;
+  slug: string;
+  name: string;
+  status: "active" | "archived" | "deleted";
+  role: "owner" | "admin" | "manager" | "member" | "viewer";
+  documentCount: number;
+  jobCount: number;
 }
 
 export interface HiveMindDocument {
   id: string;
+  tenantId: string;
+  projectId?: string | null;
+  sourceId?: string | null;
   title: string;
-  status: "pending" | "processing" | "indexed" | "failed";
-  source: string;
-  type: string;
-  chunksCount: number;
+  status: string;
+  documentType: string;
+  visibilityScope?: string | null;
+  sensitivityLevel?: string | null;
+  chunkCount: number;
   createdAt: string;
   updatedAt: string;
-  visibility: "private" | "tenant" | "public";
-  sensitivity: "low" | "medium" | "high" | "critical";
-  tenantId: string;
-  projectId?: string;
 }
 
 export interface DocumentListResponse {
   documents: HiveMindDocument[];
-  nextCursor?: string;
-  total: number;
+  nextCursor?: string | null;
 }
 
 export interface HiveMindJob {
   id: string;
-  jobType: string;
-  status: "pending" | "running" | "completed" | "failed" | "cancelled";
-  stage: string;
-  documentId?: string;
-  progress: number;
-  createdAt: string;
-  startedAt?: string;
-  completedAt?: string;
-  error?: string;
   tenantId: string;
-  projectId?: string;
+  projectId?: string | null;
+  documentId?: string | null;
+  sourceId?: string | null;
+  jobType: string;
+  status: string;
+  stage?: string | null;
+  createdAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  error?: string | null;
 }
 
 export interface JobListResponse {
   jobs: HiveMindJob[];
-  nextCursor?: string;
-  total: number;
+  nextCursor?: string | null;
 }
 
 // ─── API Key Management ─────────────────────────────────────────
 
 export interface ApiKey {
   id: string;
-  tenantId?: string;
+  tenantId?: string | null;
   name: string;
   scopes: string[];
-  status: "active" | "revoked" | "expired";
+  status: string;
   expiresAt?: string | null;
   lastUsedAt?: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateApiKeyResponse {
@@ -167,37 +237,54 @@ export interface CreateApiKeyResponse {
 
 export interface ApiKeyListResponse {
   apiKeys: ApiKey[];
-  nextCursor?: string;
-  total: number;
+  nextCursor?: string | null;
 }
 
 // ─── Audit Log ──────────────────────────────────────────────────
 
 export interface AuditLogEntry {
   id: string;
-  action: string;
-  actorId: string;
+  tenantId?: string | null;
   actorType: string;
-  targetType: string;
-  targetId: string;
-  tenantId?: string;
-  metadata?: Record<string, unknown>;
+  actorId?: string | null;
+  action: string;
+  resourceType?: string | null;
+  resourceId?: string | null;
   createdAt: string;
 }
 
 export interface AuditLogListResponse {
-  logs: AuditLogEntry[];
-  nextCursor?: string;
-  total: number;
+  auditLogs: AuditLogEntry[];
+  nextCursor?: string | null;
 }
 
-export interface DocumentDetailResponse extends HiveMindDocument {
-  chunks?: Array<{
+export interface DocumentDetailResponse {
+  id: string;
+  title: string;
+  documentType: string;
+  status: string;
+  summary?: string | null;
+  source: {
     id: string;
-    content: string;
-    index: number;
-    indexed: boolean;
-  }>;
+    name: string;
+    sourceType: string;
+    uri: string;
+  } | null;
+  sourceId?: string | null;
+  rawObjectId?: string | null;
+  sourceUrl?: string | null;
+  visibilityScope?: string | null;
+  sensitivityLevel?: string | null;
+  chunkCount: number;
+  indexedChunkCount: number;
+  indexed: boolean;
+  qdrantCollection?: string | null;
+  vectorCount?: number | null;
+  parseError?: string | null;
+  metadata?: unknown;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  processedAt?: string | null;
 }
 
 // ─── API Client Configuration ────────────────────────────────────

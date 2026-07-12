@@ -12,8 +12,6 @@ import {
   ArrowLeft,
   FileText,
   RefreshCw,
-  CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -148,10 +146,10 @@ export default function HiveMindDocumentDetailPage({
                   <span
                     className={cn(
                       "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize",
-                      sensitivityStyles[doc.sensitivity]
+                      sensitivityStyles[doc.sensitivityLevel ?? ""]
                     )}
                   >
-                    {doc.sensitivity}
+                    {doc.sensitivityLevel}
                   </span>
                 </div>
               </div>
@@ -159,68 +157,35 @@ export default function HiveMindDocumentDetailPage({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-xs text-muted-foreground">Source</p>
-                  <p className="text-foreground">{doc.source}</p>
+                  <p className="text-foreground">{doc.source?.name ?? doc.sourceId ?? "—"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Type</p>
-                  <p className="text-foreground">{doc.type}</p>
+                  <p className="text-foreground">{doc.documentType}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Visibility</p>
-                  <p className="text-foreground capitalize">{doc.visibility}</p>
+                  <p className="text-foreground capitalize">{doc.visibilityScope ?? "—"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Chunks</p>
-                  <p className="text-foreground">{doc.chunksCount}</p>
+                  <p className="text-foreground">{doc.chunkCount}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Created</p>
                   <p className="text-foreground">
-                    {new Date(doc.createdAt).toLocaleString()}
+                    {doc.createdAt ? new Date(doc.createdAt).toLocaleString() : "—"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Updated</p>
                   <p className="text-foreground">
-                    {new Date(doc.updatedAt).toLocaleString()}
+                    {doc.updatedAt ? new Date(doc.updatedAt).toLocaleString() : "—"}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Chunks */}
-            {doc.chunks && doc.chunks.length > 0 && (
-              <div className="rounded-[20px] bg-card p-6 shadow-card">
-                <h3 className="font-poppins font-semibold text-foreground mb-3">
-                  Chunks ({doc.chunks.length})
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {doc.chunks.map((chunk) => (
-                    <div
-                      key={chunk.id}
-                      className="rounded-xl bg-muted/50 p-3"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          #{chunk.index}
-                        </span>
-                        {chunk.indexed ? (
-                          <CheckCircle2 className="size-3 text-green-600" />
-                        ) : (
-                          <AlertCircle className="size-3 text-amber-500" />
-                        )}
-                        <span className="text-[11px] text-muted-foreground">
-                          {chunk.indexed ? "Indexed" : "Pending"}
-                        </span>
-                      </div>
-                      <p className="text-xs text-foreground line-clamp-3">
-                        {chunk.content}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

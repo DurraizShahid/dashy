@@ -61,7 +61,7 @@ export default function HiveMindDocumentsPage() {
         } else {
           setDocuments(res.documents);
         }
-        setNextCursor(res.nextCursor);
+        setNextCursor(res.nextCursor ?? undefined);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load documents");
         if (!cursor) setDocuments([]);
@@ -167,14 +167,16 @@ export default function HiveMindDocumentsPage() {
                         {doc.title}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
+                        {doc.sourceId && (
+                          <span className="text-[11px] text-muted-foreground">
+                            {doc.sourceId.slice(0, 8)}
+                          </span>
+                        )}
                         <span className="text-[11px] text-muted-foreground">
-                          {doc.source}
+                          &middot; {doc.documentType}
                         </span>
                         <span className="text-[11px] text-muted-foreground">
-                          &middot; {doc.type}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">
-                          &middot; {doc.chunksCount} chunks
+                          &middot; {doc.chunkCount} chunks
                         </span>
                       </div>
                     </div>
@@ -183,10 +185,10 @@ export default function HiveMindDocumentsPage() {
                     <span
                       className={cn(
                         "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-                        sensitivityStyles[doc.sensitivity]
+                        sensitivityStyles[doc.sensitivityLevel ?? ""]
                       )}
                     >
-                      {doc.sensitivity}
+                      {doc.sensitivityLevel}
                     </span>
                     <span
                       className={cn(

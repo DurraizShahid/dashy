@@ -68,7 +68,7 @@ export default function HiveMindJobsPage() {
         } else {
           setJobs(res.jobs);
         }
-        setNextCursor(res.nextCursor);
+        setNextCursor(res.nextCursor ?? undefined);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load jobs");
         if (!cursor) setJobs([]);
@@ -235,19 +235,7 @@ export default function HiveMindJobsPage() {
                     </div>
                   </div>
 
-                  {job.status === "running" && job.progress > 0 && (
-                    <div className="mt-3">
-                      <div className="h-1.5 rounded-full bg-muted">
-                        <div
-                          className="h-1.5 rounded-full bg-amber-500 transition-all duration-500"
-                          style={{ width: `${job.progress}%` }}
-                        />
-                      </div>
-                      <p className="text-[11px] text-muted-foreground mt-1">
-                        {job.progress}%
-                      </p>
-                    </div>
-                  )}
+                {/* No progress bar — backend doesn't return progress */}
                 </Link>
               );
             })}

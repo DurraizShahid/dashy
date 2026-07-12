@@ -238,9 +238,15 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
   }
 
   function queryAgentContext(req: AgentContextRequest) {
+    const body: Record<string, unknown> = { query: req.query };
+    if (req.tenantId) body.tenantId = req.tenantId;
+    if (req.projectId) body.projectId = req.projectId;
+    if (req.scope) body.scope = req.scope;
+    if (req.maxResults) body.maxResults = req.maxResults;
+    if (req.includeGraph) body.includeGraph = req.includeGraph;
     return request<AgentContextResponse>("agent/context", {
       method: "POST",
-      body: JSON.stringify(req),
+      body: JSON.stringify(body),
     });
   }
 

@@ -106,13 +106,13 @@ export default function HiveMindSettingsPage() {
             <InfoRow label="Auth Mode" value="Clerk" ok={authEnabled} />
             <InfoRow
               label="Signed In"
-              value={currentUser?.email ?? session?.email ?? (isAuthenticated ? "Yes" : "No")}
+              value={currentUser?.user?.email ?? session?.email ?? (isAuthenticated ? "Yes" : "No")}
               ok={isAuthenticated}
             />
-            {(currentUser?.name || session?.name) && (
+            {(currentUser?.user?.name || session?.name) && (
               <InfoRow
                 label="Name"
-                value={currentUser?.name || session?.name || ""}
+                value={currentUser?.user?.name || session?.name || ""}
                 ok={true}
               />
             )}

@@ -143,7 +143,7 @@ export default function HiveMindJobDetailPage({
                   />
                   <div>
                     <h2 className="font-poppins font-semibold text-foreground">
-                      {job.type}
+                      {job.jobType}
                     </h2>
                     <p className="text-xs text-muted-foreground">
                       ID: <code className="text-xs">{job.id}</code>
@@ -160,34 +160,18 @@ export default function HiveMindJobDetailPage({
                 </span>
               </div>
 
-              {/* Progress */}
-              {job.status === "running" && (
-                <div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                    <span>Progress</span>
-                    <span>{job.progress}%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted">
-                    <div
-                      className="h-2 rounded-full bg-amber-500 transition-all duration-500"
-                      style={{ width: `${job.progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* Details Grid */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Created</p>
                   <p className="text-sm text-foreground">
-                    {new Date(job.createdAt).toLocaleString()}
+                    {job.createdAt ? new Date(job.createdAt).toLocaleString() : "—"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Updated</p>
                   <p className="text-sm text-foreground">
-                    {new Date(job.updatedAt).toLocaleString()}
+                    {job.updatedAt ? new Date(job.updatedAt).toLocaleString() : "—"}
                   </p>
                 </div>
               </div>
@@ -202,14 +186,14 @@ export default function HiveMindJobDetailPage({
                 </div>
               )}
 
-              {/* Result */}
-              {job.result !== undefined && (
+              {/* Output */}
+              {job.output !== undefined && job.output !== null && (
                 <div>
                   <p className="text-xs font-medium text-foreground mb-1">
-                    Result
+                    Output
                   </p>
                   <pre className="text-xs bg-muted rounded-xl p-3 overflow-x-auto text-muted-foreground">
-                    {JSON.stringify(job.result, null, 2)}
+                    {JSON.stringify(job.output, null, 2)}
                   </pre>
                 </div>
               )}
