@@ -48,7 +48,6 @@ export default function GraphDocumentDetailPage() {
   }, [client, selectedTenantId, params.id]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDocument();
   }, [fetchDocument]);
 
@@ -137,7 +136,7 @@ export default function GraphDocumentDetailPage() {
         <div className="rounded-[20px] bg-card p-5 shadow-card">
           <h3 className="font-poppins font-semibold text-foreground text-sm flex items-center gap-2 mb-3">
             <Brain className="size-4" />
-            Entities ({data.entities.length})
+            Extracted Entities ({data.entities.length})
           </h3>
           {data.entities.length > 0 ? (
             <div className="flex flex-col gap-1">
@@ -147,11 +146,13 @@ export default function GraphDocumentDetailPage() {
                   href={`/hive-mind/graph/entities/${entity.id}`}
                   className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors"
                 >
-                  <Brain className="size-4 text-muted-foreground" />
-                  <span className="text-sm text-foreground">{entity.name}</span>
-                  <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-                    {entity.entityType}
-                  </span>
+                  <Brain className="size-4 text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-foreground truncate">{entity.name}</span>
+                    <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 text-muted-foreground ml-2">
+                      {entity.entityType}
+                    </span>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -167,15 +168,17 @@ export default function GraphDocumentDetailPage() {
             Chunks ({data.chunks.length})
           </h3>
           {data.chunks.length > 0 ? (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               {data.chunks.map((chunk) => (
                 <div
                   key={chunk.id}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2"
+                  className="rounded-lg border border-input p-3 space-y-1.5"
                 >
-                  <Layers className="size-3 text-muted-foreground" />
-                  <span className="text-sm text-foreground">Chunk {chunk.chunkIndex}</span>
-                  <span className="text-[11px] text-muted-foreground">({chunk.id})</span>
+                  <div className="flex items-center gap-2">
+                    <Layers className="size-3 text-muted-foreground shrink-0" />
+                    <span className="text-sm text-foreground font-medium">Chunk {chunk.chunkIndex}</span>
+                    <span className="text-[11px] text-muted-foreground">({chunk.id})</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -188,30 +191,30 @@ export default function GraphDocumentDetailPage() {
         <div className="rounded-[20px] bg-card p-5 shadow-card">
           <h3 className="font-poppins font-semibold text-foreground text-sm flex items-center gap-2 mb-3">
             <GitBranch className="size-4" />
-            Relationships ({data.relationships.length})
+            Extracted Relationships ({data.relationships.length})
           </h3>
           {data.relationships.length > 0 ? (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               {data.relationships.map((rel, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors"
+                  className="rounded-lg border border-input p-3 hover:bg-muted/50 transition-colors"
                 >
-                  <Link
-                    href={`/hive-mind/graph/entities/${rel.fromId}`}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {rel.fromType}
-                  </Link>
-                  <span className="text-xs text-muted-foreground">
-                    —[{rel.relationship}]—
-                  </span>
-                  <Link
-                    href={`/hive-mind/graph/entities/${rel.toId}`}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {rel.toType}
-                  </Link>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Link
+                      href={`/hive-mind/graph/entities/${rel.fromId}`}
+                      className="text-sm text-primary hover:underline font-medium"
+                    >
+                      {rel.fromType}
+                    </Link>
+                    <span className="text-xs text-muted-foreground">—[{rel.relationship}]—</span>
+                    <Link
+                      href={`/hive-mind/graph/entities/${rel.toId}`}
+                      className="text-sm text-primary hover:underline font-medium"
+                    >
+                      {rel.toType}
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>

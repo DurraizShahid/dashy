@@ -102,6 +102,9 @@ export interface AgentContextRequest {
   scope?: string;
   maxResults?: number;
   includeGraph?: boolean;
+  graphDepth?: number;
+  maxGraphEntities?: number;
+  maxGraphRelationships?: number;
 }
 
 export interface AgentContextRelevantDocument {
@@ -121,17 +124,44 @@ export interface AgentContextRelevantChunk {
   citation: KnowledgeSearchCitation;
 }
 
+export interface AgentContextGraphEntity {
+  id: string;
+  name: string;
+  entityType: string;
+  mentionCount: number;
+}
+
+export interface AgentContextGraphRelationship {
+  sourceEntityId: string;
+  sourceEntityName: string;
+  targetEntityId: string;
+  targetEntityName: string;
+  relationshipType: string;
+  confidence?: number;
+  evidenceChunkIds?: string[];
+}
+
+export interface AgentContextRelatedDocument {
+  documentId: string;
+  title: string;
+  relevance: string;
+}
+
 export interface AgentContextResponse {
   mission: string;
   relevantDocuments: AgentContextRelevantDocument[];
   relevantChunks: AgentContextRelevantChunk[];
   citations: KnowledgeSearchCitation[];
+  graphEntities?: AgentContextGraphEntity[];
+  graphRelationships?: AgentContextGraphRelationship[];
+  relatedDocuments?: AgentContextRelatedDocument[];
   retrievalSummary: string;
   warnings: string[];
   qdrantCollection: string;
   totalLatencyMs: number;
   embeddingLatencyMs: number;
   searchLatencyMs: number;
+  graphLatencyMs?: number;
   minScore: number;
 }
 
@@ -322,6 +352,7 @@ export interface GraphOverviewResponse {
   topEntities: Array<{ id: string; name: string; entityType: string; mentionCount: number }>;
   recentDocuments: Array<{ id: string; title: string }>;
   graphHealth: 'healthy' | 'unhealthy';
+  warnings?: string[];
 }
 
 export interface GraphEntitySummary {
@@ -330,11 +361,20 @@ export interface GraphEntitySummary {
   entityType: string;
   mentionCount: number;
   documentCount: number;
+  confidence?: number;
+  aliases?: string[];
 }
 
 export interface GraphEntitiesResponse {
   entities: GraphEntitySummary[];
   nextCursor: string | null;
+}
+
+export interface GraphEntityEvidenceChunk {
+  id: string;
+  chunkIndex: number;
+  documentId: string;
+  snippet?: string;
 }
 
 export interface GraphEntityDetailResponse {
@@ -344,9 +384,33 @@ export interface GraphEntityDetailResponse {
     entityType: string;
     metadata: Record<string, unknown>;
   } | null;
-  relatedEntities: Array<{ id: string; name: string; entityType: string; relationship: string }>;
+  relatedEntities: Array<{
+    id: string;
+    name: string;
+    entityType: string;
+    relationship: string;
+  }>;
   mentionedInDocuments: Array<{ id: string; title: string }>;
   mentionedInChunks: Array<{ id: string; chunkIndex: number; documentId: string }>;
+}
+
+export interface GraphDocumentEntity {
+  id: string;
+  name: string;
+  entityType: string;
+}
+
+export interface GraphDocumentRelationship {
+  fromType: string;
+  fromId: string;
+  toType: string;
+  toId: string;
+  relationship: string;
+}
+
+export interface GraphDocumentChunk {
+  id: string;
+  chunkIndex: number;
 }
 
 export interface GraphDocumentDetailResponse {
@@ -356,9 +420,9 @@ export interface GraphDocumentDetailResponse {
     tenantId: string;
     projectId?: string;
   } | null;
-  entities: Array<{ id: string; name: string; entityType: string }>;
-  chunks: Array<{ id: string; chunkIndex: number }>;
-  relationships: Array<{ fromType: string; fromId: string; toType: string; toId: string; relationship: string }>;
+  entities: GraphDocumentEntity[];
+  chunks: GraphDocumentChunk[];
+  relationships: GraphDocumentRelationship[];
 }
 
 export interface GraphSearchResponse {

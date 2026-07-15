@@ -49,7 +49,6 @@ export default function GraphEntityDetailPage() {
   }, [client, selectedTenantId, selectedProject, params.id]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEntity();
   }, [fetchEntity]);
 
@@ -138,11 +137,12 @@ export default function GraphEntityDetailPage() {
         <div className="rounded-[20px] bg-card p-5 shadow-card">
           <div className="flex items-center gap-3 mb-4">
             <Brain className="size-6 text-primary" />
-            <div>
+            <div className="flex-1">
               <h2 className="text-lg font-semibold text-foreground">{data.entity.name}</h2>
               <p className="text-xs text-muted-foreground">{data.entity.entityType}</p>
             </div>
           </div>
+
           {data.entity.metadata && Object.keys(data.entity.metadata).length > 0 && (
             <div className="border-t border-border pt-3 mt-3">
               <h4 className="text-xs font-medium text-muted-foreground mb-2">Metadata</h4>
@@ -167,20 +167,26 @@ export default function GraphEntityDetailPage() {
           {data.relatedEntities.length > 0 ? (
             <div className="flex flex-col gap-1">
               {data.relatedEntities.map((rel, i) => (
-                <Link
+                <div
                   key={`${rel.id}-${i}`}
-                  href={`/hive-mind/graph/entities/${rel.id}`}
                   className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
-                    <Brain className="size-4 text-muted-foreground" />
-                    <span className="text-sm text-foreground">{rel.name}</span>
-                    <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-                      {rel.entityType}
-                    </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Link
+                      href={`/hive-mind/graph/entities/${rel.id}`}
+                      className="flex items-center gap-2 min-w-0"
+                    >
+                      <Brain className="size-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm text-foreground truncate">{rel.name}</span>
+                      <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 text-muted-foreground shrink-0">
+                        {rel.entityType}
+                      </span>
+                    </Link>
                   </div>
-                  <span className="text-[11px] text-primary font-medium">{rel.relationship}</span>
-                </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] text-primary font-medium">{rel.relationship}</span>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
@@ -215,30 +221,32 @@ export default function GraphEntityDetailPage() {
         <div className="rounded-[20px] bg-card p-5 shadow-card">
           <h3 className="font-poppins font-semibold text-foreground text-sm flex items-center gap-2 mb-3">
             <Layers className="size-4" />
-            Mentioned In Chunks ({data.mentionedInChunks.length})
+            Evidence Chunks ({data.mentionedInChunks.length})
           </h3>
           {data.mentionedInChunks.length > 0 ? (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               {data.mentionedInChunks.map((chunk) => (
                 <div
                   key={chunk.id}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2"
+                  className="rounded-lg border border-input p-3 space-y-1.5"
                 >
-                  <Layers className="size-3 text-muted-foreground" />
-                  <span className="text-sm text-foreground">
-                    Chunk {chunk.chunkIndex}
-                  </span>
-                  <Link
-                    href={`/hive-mind/graph/documents/${chunk.documentId}`}
-                    className="text-xs text-primary hover:underline ml-auto"
-                  >
-                    View document
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Layers className="size-3 text-muted-foreground shrink-0" />
+                    <span className="text-sm text-foreground font-medium">
+                      Chunk {chunk.chunkIndex}
+                    </span>
+                    <Link
+                      href={`/hive-mind/graph/documents/${chunk.documentId}`}
+                      className="text-xs text-primary hover:underline ml-auto shrink-0"
+                    >
+                      View document
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">No chunk mentions</p>
+            <p className="text-xs text-muted-foreground">No evidence chunks</p>
           )}
         </div>
       </div>

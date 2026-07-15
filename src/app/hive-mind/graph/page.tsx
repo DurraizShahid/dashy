@@ -16,6 +16,7 @@ import {
   RefreshCw,
   AlertTriangle,
   List,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +54,6 @@ export default function GraphOverviewPage() {
   }, [client, selectedTenantId, selectedProject]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOverview();
   }, [fetchOverview]);
 
@@ -103,6 +103,21 @@ export default function GraphOverviewPage() {
           </div>
         ) : (
           <>
+            {/* Warnings */}
+            {overview.warnings && overview.warnings.length > 0 && (
+              <div className="rounded-[20px] bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-amber-800 dark:text-amber-300">Warnings</p>
+                    {overview.warnings.map((w, i) => (
+                      <p key={i} className="text-xs text-amber-700 dark:text-amber-400">{w}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-[20px] bg-card p-5 shadow-card">
@@ -165,6 +180,7 @@ export default function GraphOverviewPage() {
                   </Link>
                 </div>
               </div>
+
             </div>
 
             {/* Top Entities */}
