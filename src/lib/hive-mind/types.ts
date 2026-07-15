@@ -463,6 +463,59 @@ export interface GraphSearchResponse {
   warnings: string[];
 }
 
+// ── Merge Suggestions ──
+
+export interface MergeSuggestionItem {
+  entity: {
+    id: string;
+    name: string;
+    entityType: string;
+    aliases?: string[];
+    mentionCount: number;
+    documentCount: number;
+    confidence?: number;
+    extractionMethod?: string;
+  };
+  duplicate: {
+    id: string;
+    name: string;
+    entityType: string;
+    aliases?: string[];
+    mentionCount: number;
+    documentCount: number;
+    confidence?: number;
+    extractionMethod?: string;
+  };
+  score: number;
+  reasons: string[];
+  sharedDocuments: Array<{ id: string; title: string }>;
+  type: 'exact_canonical' | 'alias_overlap' | 'similar_name' | 'shared_evidence';
+}
+
+export interface MergeSuggestionsResponse {
+  suggestions: MergeSuggestionItem[];
+  nextCursor?: string | null;
+}
+
+export interface MergeEntitiesResponse {
+  mergedIntoId: string;
+  mergedId: string;
+  mergedAliases: string[];
+  relationshipCount: number;
+}
+
+export interface IgnoreMergeSuggestionResponse {
+  ignored: boolean;
+}
+
+export interface ReindexResponse {
+  enqueued: boolean;
+  jobId?: string;
+  dryRun: boolean;
+  details: string;
+  affectedDocuments?: number;
+}
+
 // ─── API Client Configuration ────────────────────────────────────
 
 export interface HiveMindClientConfig {

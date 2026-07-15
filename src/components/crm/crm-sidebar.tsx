@@ -28,6 +28,7 @@ import {
   Cog,
   UsersRound,
   ChartNetwork,
+  GitBranch,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth/use-auth"
@@ -58,6 +59,7 @@ const hiveMindItems = [
   { label: "Under the Hood", icon: Cog, href: "/hive-mind/under-the-hood" },
   { label: "Departments", icon: UsersRound, href: "/hive-mind/departments" },
   { label: "Graph Memory", icon: ChartNetwork, href: "/hive-mind/graph" },
+  { label: "Graph Quality", icon: GitBranch, href: "/hive-mind/graph/quality" },
 ]
 
 const adminItems = [

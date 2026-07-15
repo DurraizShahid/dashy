@@ -24,6 +24,10 @@ import {
   type GraphEntityDetailResponse,
   type GraphDocumentDetailResponse,
   type GraphSearchResponse,
+  type MergeSuggestionsResponse,
+  type MergeEntitiesResponse,
+  type IgnoreMergeSuggestionResponse,
+  type ReindexResponse,
 } from "./types";
 import {
   HiveMindApiError,
@@ -410,6 +414,70 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     });
   }
 
+  // ── Graph Quality: Merge Suggestions ──
+
+  function getMergeSuggestions(params: {
+    tenantId: string;
+    projectId?: string;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const query = new URLSearchParams({ tenantId: params.tenantId });
+    if (params.projectId) query.set("projectId", params.projectId);
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.cursor) query.set("cursor", params.cursor);
+    return request<MergeSuggestionsResponse>(`graph/entities/merge-suggestions?${query}`);
+  }
+
+  function mergeEntities(params: {
+    tenantId: string;
+    keepId: string;
+    mergeId: string;
+  }) {
+    return request<MergeEntitiesResponse>(`graph/entities/${params.keepId}/merge`, {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  function ignoreMergeSuggestion(params: {
+    tenantId: string;
+    entityId: string;
+    duplicateId: string;
+  }) {
+    return request<IgnoreMergeSuggestionResponse>(`graph/entities/${params.entityId}/ignore-merge-suggestion`, {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  // ── Graph Rebuild Controls ──
+
+  function reindexDocument(params: {
+    tenantId: string;
+    documentId: string;
+    projectId?: string;
+    dryRun?: boolean;
+    clearFirst?: boolean;
+  }) {
+    return request<ReindexResponse>("graph/admin/reindex-document", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  function reindexTenant(params: {
+    tenantId: string;
+    projectId?: string;
+    dryRun?: boolean;
+    clearFirst?: boolean;
+  }) {
+    return request<ReindexResponse>("graph/admin/reindex-tenant", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
   return {
     // Auth
     getMe,
@@ -449,6 +517,13 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     getGraphEntity,
     getDocumentGraph,
     searchGraph,
+
+    // Graph Quality
+    getMergeSuggestions,
+    mergeEntities,
+    ignoreMergeSuggestion,
+    reindexDocument,
+    reindexTenant,
 
     // Raw access for one-off endpoints
     request,
