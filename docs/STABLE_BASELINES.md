@@ -65,3 +65,45 @@
 ### Next sprint
 
 **LLM-powered entity extraction + graph-aware agent context** — introducing LLM-driven extraction of entities and relationships from ingested documents, and enriching agent context with graph-derived knowledge.
+
+---
+
+## Baseline: Graph Intelligence
+
+| Field            | Value                                              |
+|------------------|----------------------------------------------------|
+| **Tag**          | `dashy-graph-intelligence-stable-v1`               |
+| **Commit SHA**   | `cd24b06c5c7335a6bd6886358dd74f38e59a5340`        |
+| **Date**         | 2026-07-16                                         |
+| **Branch**       | `main`                                             |
+
+### What is stable
+
+- All Graph Memory stable features
+- Graph Overview page aligned with actual backend response shape (warnings field, no fake cards)
+- Entity Detail page showing only real backend fields (no confidence/aliases/extractionMethod fakes)
+- Document Graph page showing only real backend fields (no fake confidence/mentionCount/snippets)
+- Agent Context page with includeGraph toggle and graph context section (entities, relationships, related docs)
+- Graph unavailable warning banner when Neo4j is unreachable
+- SESSION_EXPIRED redirect on all graph pages
+- API client type contract matches backend responses exactly
+- Extraction badges and confidence indicators only shown when backend provides the data
+
+### What not to change casually
+
+- All Graph Memory "not to change" items
+- Graph page routes and data-fetching patterns
+- API client type definitions (must match backend response shapes exactly)
+- Graph UI component layout and state management
+- Agent context query form and graph enrichment display
+
+### Known Limitations
+
+- Frontend only displays fields currently returned by backend API responses; fields like extractionMethodStats, entityTypeCounts, and relationshipTypeCounts are not yet available from backend
+- Entity detail page does not show confidence/aliases/extractionMethod (backend does not return these yet)
+- Document graph page does not show entity confidence, mention counts, or extraction badges (backend does not return these yet)
+- Chunk snippets are not available on entity detail or document graph pages (backed does not store content in Neo4j)
+
+### Next sprint
+
+**Graph Contract Expansion + LLM Extraction Quality** — expand backend graph read endpoints to surface stored metadata (confidence, extraction method, aliases, evidence chunks), and improve LLM extraction quality with better prompts and validation.
