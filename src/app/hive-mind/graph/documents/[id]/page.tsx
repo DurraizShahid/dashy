@@ -141,19 +141,54 @@ export default function GraphDocumentDetailPage() {
           {data.entities.length > 0 ? (
             <div className="flex flex-col gap-1">
               {data.entities.map((entity) => (
-                <Link
+                <div
                   key={entity.id}
-                  href={`/hive-mind/graph/entities/${entity.id}`}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors"
+                  className="rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors"
                 >
-                  <Brain className="size-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-foreground truncate">{entity.name}</span>
-                    <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 text-muted-foreground ml-2">
+                  <div className="flex items-center gap-2">
+                    <Brain className="size-4 text-muted-foreground shrink-0" />
+                    <Link
+                      href={`/hive-mind/graph/entities/${entity.id}`}
+                      className="text-sm text-foreground hover:text-primary hover:underline truncate"
+                    >
+                      {entity.name}
+                    </Link>
+                    <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 text-muted-foreground shrink-0">
                       {entity.entityType}
                     </span>
+                    <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                      {entity.confidence !== undefined && entity.confidence !== null && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {Math.round(entity.confidence * 100)}%
+                        </span>
+                      )}
+                      {entity.mentionCount !== undefined && entity.mentionCount !== null && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {entity.mentionCount} mention{entity.mentionCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </Link>
+                  {entity.aliases && entity.aliases.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5 ml-6">
+                      {entity.aliases.map((alias) => (
+                        <span
+                          key={alias}
+                          className="text-[10px] rounded-full bg-muted/50 px-2 py-0.5 text-muted-foreground"
+                        >
+                          {alias}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {entity.extractionMethod && (
+                    <div className="mt-1 ml-6">
+                      <span className="text-[10px] text-muted-foreground capitalize">
+                        via {entity.extractionMethod.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
@@ -179,6 +214,11 @@ export default function GraphDocumentDetailPage() {
                     <span className="text-sm text-foreground font-medium">Chunk {chunk.chunkIndex}</span>
                     <span className="text-[11px] text-muted-foreground">({chunk.id})</span>
                   </div>
+                  {chunk.snippet && (
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mt-1">
+                      {chunk.snippet}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -214,7 +254,17 @@ export default function GraphDocumentDetailPage() {
                     >
                       {rel.toType}
                     </Link>
+                    {rel.confidence !== undefined && rel.confidence !== null && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {Math.round(rel.confidence * 100)}%
+                      </span>
+                    )}
                   </div>
+                  {rel.evidenceChunkIds && rel.evidenceChunkIds.length > 0 && (
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      Based on {rel.evidenceChunkIds.length} evidence chunk{rel.evidenceChunkIds.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

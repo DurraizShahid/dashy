@@ -143,6 +143,48 @@ export default function GraphEntityDetailPage() {
             </div>
           </div>
 
+          {data.entity.aliases && data.entity.aliases.length > 0 && (
+            <div className="border-t border-border pt-3 mt-3">
+              <h4 className="text-xs font-medium text-muted-foreground mb-2">Aliases</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {data.entity.aliases.map((alias) => (
+                  <span
+                    key={alias}
+                    className="text-[11px] rounded-full bg-muted px-2.5 py-0.5 text-muted-foreground"
+                  >
+                    {alias}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data.entity.confidence !== undefined && data.entity.confidence !== null && (
+            <div className="border-t border-border pt-3 mt-3">
+              <h4 className="text-xs font-medium text-muted-foreground mb-2">Confidence</h4>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${Math.round(data.entity.confidence * 100)}%` }}
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {Math.round(data.entity.confidence * 100)}%
+                </span>
+              </div>
+            </div>
+          )}
+
+          {data.entity.extractionMethod && (
+            <div className="border-t border-border pt-3 mt-3">
+              <h4 className="text-xs font-medium text-muted-foreground mb-2">Extraction Method</h4>
+              <span className="text-[11px] rounded-full bg-muted px-2.5 py-0.5 text-muted-foreground capitalize">
+                {data.entity.extractionMethod.replace(/_/g, ' ')}
+              </span>
+            </div>
+          )}
+
           {data.entity.metadata && Object.keys(data.entity.metadata).length > 0 && (
             <div className="border-t border-border pt-3 mt-3">
               <h4 className="text-xs font-medium text-muted-foreground mb-2">Metadata</h4>
@@ -185,7 +227,17 @@ export default function GraphEntityDetailPage() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-[11px] text-primary font-medium">{rel.relationship}</span>
+                    {rel.confidence !== undefined && rel.confidence !== null && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {Math.round(rel.confidence * 100)}%
+                      </span>
+                    )}
                   </div>
+                  {rel.evidenceChunkIds && rel.evidenceChunkIds.length > 0 && (
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      {rel.evidenceChunkIds.length} evidence chunk{rel.evidenceChunkIds.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -242,6 +294,11 @@ export default function GraphEntityDetailPage() {
                       View document
                     </Link>
                   </div>
+                  {chunk.snippet && (
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {chunk.snippet}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

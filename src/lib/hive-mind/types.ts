@@ -345,12 +345,31 @@ export interface DocumentDetailResponse {
 
 // ─── Graph Memory ─────────────────────────────────────────────────
 
+export interface ExtractionMethodStat {
+  method: string;
+  count: number;
+}
+
+export interface EntityTypeCount {
+  type: string;
+  count: number;
+}
+
+export interface RelationshipTypeCount {
+  type: string;
+  count: number;
+}
+
 export interface GraphOverviewResponse {
   entityCount: number;
   relationshipCount: number;
   documentNodeCount: number;
   topEntities: Array<{ id: string; name: string; entityType: string; mentionCount: number }>;
   recentDocuments: Array<{ id: string; title: string }>;
+  extractionMethodStats?: ExtractionMethodStat[];
+  entityTypeCounts?: EntityTypeCount[];
+  relationshipTypeCounts?: RelationshipTypeCount[];
+  recentGraphIndexedDocuments?: Array<{ id: string; title: string }>;
   graphHealth: 'healthy' | 'unhealthy';
   warnings?: string[];
 }
@@ -383,21 +402,30 @@ export interface GraphEntityDetailResponse {
     name: string;
     entityType: string;
     metadata: Record<string, unknown>;
+    confidence?: number;
+    aliases?: string[];
+    extractionMethod?: string;
   } | null;
   relatedEntities: Array<{
     id: string;
     name: string;
     entityType: string;
     relationship: string;
+    confidence?: number;
+    evidenceChunkIds?: string[];
   }>;
   mentionedInDocuments: Array<{ id: string; title: string }>;
-  mentionedInChunks: Array<{ id: string; chunkIndex: number; documentId: string }>;
+  mentionedInChunks: Array<{ id: string; chunkIndex: number; documentId: string; snippet?: string }>;
 }
 
 export interface GraphDocumentEntity {
   id: string;
   name: string;
   entityType: string;
+  confidence?: number;
+  aliases?: string[];
+  mentionCount?: number;
+  extractionMethod?: string;
 }
 
 export interface GraphDocumentRelationship {
@@ -406,11 +434,14 @@ export interface GraphDocumentRelationship {
   toType: string;
   toId: string;
   relationship: string;
+  confidence?: number;
+  evidenceChunkIds?: string[];
 }
 
 export interface GraphDocumentChunk {
   id: string;
   chunkIndex: number;
+  snippet?: string;
 }
 
 export interface GraphDocumentDetailResponse {

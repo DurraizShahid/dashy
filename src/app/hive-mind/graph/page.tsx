@@ -17,6 +17,10 @@ import {
   AlertTriangle,
   List,
   AlertCircle,
+  BarChart3,
+  Tags,
+  Activity,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -183,6 +187,58 @@ export default function GraphOverviewPage() {
 
             </div>
 
+            {/* Graph Intelligence Breakdowns */}
+            {overview.extractionMethodStats && overview.extractionMethodStats.length > 0 && (
+              <div className="rounded-[20px] bg-card p-5 shadow-card">
+                <h3 className="font-poppins font-semibold text-foreground text-sm flex items-center gap-2 mb-3">
+                  <Activity className="size-4" />
+                  Extraction Methods
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {overview.extractionMethodStats.map((stat) => (
+                    <div key={stat.method} className="flex items-center justify-between">
+                      <span className="text-sm text-foreground capitalize">{stat.method.replace(/_/g, ' ')}</span>
+                      <span className="text-sm font-medium text-muted-foreground">{stat.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {overview.entityTypeCounts && overview.entityTypeCounts.length > 0 && (
+              <div className="rounded-[20px] bg-card p-5 shadow-card">
+                <h3 className="font-poppins font-semibold text-foreground text-sm flex items-center gap-2 mb-3">
+                  <Tags className="size-4" />
+                  Entity Types
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {overview.entityTypeCounts.map((stat) => (
+                    <div key={stat.type} className="flex items-center justify-between">
+                      <span className="text-sm capitalize text-foreground">{stat.type}</span>
+                      <span className="text-sm font-medium text-muted-foreground">{stat.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {overview.relationshipTypeCounts && overview.relationshipTypeCounts.length > 0 && (
+              <div className="rounded-[20px] bg-card p-5 shadow-card">
+                <h3 className="font-poppins font-semibold text-foreground text-sm flex items-center gap-2 mb-3">
+                  <BarChart3 className="size-4" />
+                  Relationship Types
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {overview.relationshipTypeCounts.map((stat) => (
+                    <div key={stat.type} className="flex items-center justify-between">
+                      <span className="text-sm text-foreground">{stat.type}</span>
+                      <span className="text-sm font-medium text-muted-foreground">{stat.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Top Entities */}
             <div className="rounded-[20px] bg-card p-5 shadow-card">
               <div className="flex items-center justify-between mb-3">
@@ -226,13 +282,13 @@ export default function GraphOverviewPage() {
             <div className="rounded-[20px] bg-card p-5 shadow-card">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-poppins font-semibold text-foreground text-sm flex items-center gap-2">
-                  <FileText className="size-4" />
-                  Recent Documents in Graph
+                  <Clock className="size-4" />
+                  Recently Indexed Documents
                 </h3>
               </div>
-              {overview.recentDocuments.length > 0 ? (
+              {(overview.recentGraphIndexedDocuments ?? overview.recentDocuments).length > 0 ? (
                 <div className="flex flex-col gap-1">
-                  {overview.recentDocuments.map((doc) => (
+                  {(overview.recentGraphIndexedDocuments ?? overview.recentDocuments).map((doc) => (
                     <Link
                       key={doc.id}
                       href={`/hive-mind/graph/documents/${doc.id}`}
