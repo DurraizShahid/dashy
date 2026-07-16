@@ -107,3 +107,43 @@
 ### Next sprint
 
 **Graph Contract Expansion + LLM Extraction Quality** — expand backend graph read endpoints to surface stored metadata (confidence, extraction method, aliases, evidence chunks), and improve LLM extraction quality with better prompts and validation.
+
+---
+
+## Baseline: Graph Intelligence v1 Final
+
+| Field            | Value                                                           |
+|------------------|-----------------------------------------------------------------|
+| **Tag**          | `dashy-graph-intelligence-v1-final`                             |
+| **Commit SHA**   | `5bcceecd02f348e4baaf0ff447c8962060fb2c92`                     |
+| **Date**         | 2026-07-16                                                      |
+| **Branch**       | `main`                                                          |
+
+### What is stable
+
+- All Graph Intelligence stable features
+- Graph quality dashboard with overview stats cards (entity/relationship/document node counts)
+- Extraction method stats display
+- Merge suggestions with keep/duplicate comparison and inline merge preview
+- Merge history accordion with revert buttons
+- Graph rebuild controls (reindex document/tenant, dry-run, clearFirst)
+- Graph backfill controls (scope selector, dry-run toggle, result display with queued/skipped/failed counts)
+- Frontend types matching backend response shapes: MergeEntitiesPreviewResponse, RevertMergeResponse, MergeHistory*, BackfillGraphResponse, ExtractionCost
+- API client methods: getMergePreview, revertMerge, getMergeHistory, backfillGraph
+
+### What not to change casually
+
+- All Graph Intelligence "not to change" items
+- Graph quality page layout, data-fetching pattern, and state management
+- API client type definitions (must match backend response shapes exactly)
+- Dashboard section routing and component structure
+
+### Known Limitations
+
+- Backfill UI requires admin privileges (only visible to system admins)
+- Merge preview and revert are best-effort when Neo4j is unavailable (returns safe empty responses)
+- No polling/websocket for backfill job status (manual refresh)
+
+### Next sprint
+
+**Autonomous Research Memory** — persistent cross-session memory that agents autonomously read and write during research tasks, grounded in the graph knowledge base.
