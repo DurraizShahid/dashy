@@ -26,8 +26,12 @@ import {
   type GraphSearchResponse,
   type MergeSuggestionsResponse,
   type MergeEntitiesResponse,
+  type MergeEntitiesPreviewResponse,
   type IgnoreMergeSuggestionResponse,
+  type RevertMergeResponse,
+  type MergeHistoryResponse,
   type ReindexResponse,
+  type BackfillGraphResponse,
 } from "./types";
 import {
   HiveMindApiError,
@@ -451,6 +455,53 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     });
   }
 
+  function getMergePreview(params: {
+    tenantId: string;
+    keepId: string;
+    mergeId: string;
+  }) {
+    return request<MergeEntitiesPreviewResponse>("graph/entities/merge-preview", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  function revertMerge(params: {
+    tenantId: string;
+    entityId: string;
+  }) {
+    return request<RevertMergeResponse>("graph/entities/revert-merge", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  function getMergeHistory(params: {
+    tenantId: string;
+    projectId?: string;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const query = new URLSearchParams({ tenantId: params.tenantId });
+    if (params.projectId) query.set("projectId", params.projectId);
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.cursor) query.set("cursor", params.cursor);
+    return request<MergeHistoryResponse>(`graph/entities/merge-history?${query}`);
+  }
+
+  function backfillGraph(params: {
+    tenantId: string;
+    projectId?: string;
+    documentId?: string;
+    scope: "document" | "project" | "tenant" | "failed";
+    dryRun?: boolean;
+  }) {
+    return request<BackfillGraphResponse>("graph/admin/backfill", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
   // ── Graph Rebuild Controls ──
 
   function reindexDocument(params: {
@@ -522,6 +573,10 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     getMergeSuggestions,
     mergeEntities,
     ignoreMergeSuggestion,
+    getMergePreview,
+    revertMerge,
+    getMergeHistory,
+    backfillGraph,
     reindexDocument,
     reindexTenant,
 

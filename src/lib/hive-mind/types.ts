@@ -508,12 +508,68 @@ export interface IgnoreMergeSuggestionResponse {
   ignored: boolean;
 }
 
+export interface MergeEntitiesPreviewResponse {
+  keepEntity: { id: string; name: string; entityType: string; projectId?: string };
+  mergeEntity: { id: string; name: string; entityType: string; projectId?: string };
+  incomingRelsCount: number;
+  outgoingRelsCount: number;
+  docMentionsCount: number;
+  chunkMentionsCount: number;
+  mergedAliases: string[];
+  crossProject: boolean;
+  canMerge: boolean;
+  warning?: string;
+}
+
+export interface RevertMergeResponse {
+  reverted: boolean;
+  mergedIntoId: string | null;
+  message: string;
+}
+
+export interface MergeHistoryEntry {
+  entityId: string;
+  entityName: string;
+  mergedIntoId: string;
+  mergedIntoName: string;
+  mergedAt: string;
+}
+
+export interface MergeHistoryResponse {
+  entries: MergeHistoryEntry[];
+}
+
 export interface ReindexResponse {
   enqueued: boolean;
   jobId?: string;
   dryRun: boolean;
   details: string;
   affectedDocuments?: number;
+}
+
+export interface BackfillItem {
+  documentId: string;
+  tenantId: string;
+  projectId?: string | null;
+  status: 'queued' | 'skipped' | 'failed';
+  reason?: string;
+}
+
+export interface BackfillGraphResponse {
+  queuedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  items: BackfillItem[];
+  dryRun: boolean;
+}
+
+export interface ExtractionCost {
+  modelName: string;
+  chunksAnalyzed: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  latencyMs: number;
+  estimatedCostUsd?: number;
 }
 
 // ─── API Client Configuration ────────────────────────────────────
