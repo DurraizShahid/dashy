@@ -29,6 +29,7 @@ import {
   UsersRound,
   ChartNetwork,
   GitBranch,
+  BrainCircuit,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth/use-auth"
@@ -52,6 +53,7 @@ const hiveMindItems = [
   { label: "Health", icon: HeartPulse, href: "/hive-mind/health" },
   { label: "Services", icon: Wifi, href: "/hive-mind/services" },
   { label: "Knowledge", icon: BookOpen, href: "/hive-mind/knowledge" },
+  { label: "Research Memory", icon: BrainCircuit, href: "/hive-mind/research" },
   { label: "Ingest", icon: Upload, href: "/hive-mind/ingest" },
   { label: "Documents", icon: FolderArchive, href: "/hive-mind/documents" },
   { label: "Jobs", icon: Activity, href: "/hive-mind/jobs" },

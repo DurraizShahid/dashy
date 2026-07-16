@@ -572,6 +572,107 @@ export interface ExtractionCost {
   estimatedCostUsd?: number;
 }
 
+// ─── Research Memory ────────────────────────────────────────────
+
+export type ResearchRunStatus = 'pending' | 'indexing' | 'summarizing' | 'completed' | 'failed' | 'cancelled';
+export type ResearchSourceMode = 'auto' | 'manual' | 'hybrid';
+
+export interface ResearchRun {
+  id: string;
+  tenantId: string;
+  projectId?: string | null;
+  query: string;
+  status: ResearchRunStatus;
+  stage?: string | null;
+  sourceMode: ResearchSourceMode;
+  maxSources?: number | null;
+  sourceCount?: number | null;
+  outputSummary?: string | null;
+  warnings?: string[] | null;
+  estimatedCostUsd?: number | null;
+  latencyMs?: number | null;
+  error?: string | null;
+  createdAt: string;
+  updatedAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+}
+
+export interface ResearchRunListResponse {
+  runs: ResearchRun[];
+  total?: number;
+  nextCursor?: string | null;
+}
+
+export interface CreateResearchRunRequest {
+  query: string;
+  sourceMode: ResearchSourceMode;
+  tenantId: string;
+  projectId?: string;
+  maxSources?: number;
+  manualUrls?: string[];
+}
+
+export interface CreateResearchRunResponse {
+  run: ResearchRun;
+}
+
+export interface ResearchSource {
+  id: string;
+  runId: string;
+  tenantId: string;
+  projectId?: string | null;
+  url: string;
+  title?: string | null;
+  documentId?: string | null;
+  crawlStatus?: string | null;
+  indexStatus?: string | null;
+  selected?: string | null;
+  createdAt?: string | null;
+}
+
+export interface ResearchSourceListResponse {
+  sources: ResearchSource[];
+}
+
+export interface ResearchFindingCitation {
+  claim: string;
+  sourceUrl: string;
+  sourceDocumentId: string;
+  chunkId?: string;
+}
+
+export interface ResearchFinding {
+  id: string;
+  runId: string;
+  tenantId: string;
+  projectId?: string | null;
+  title: string;
+  summary: string;
+  confidence?: string | null;
+  sourceDocumentIds?: string[] | null;
+  sourceUrls?: string[] | null;
+  citations?: ResearchFindingCitation[] | null;
+  createdAt?: string | null;
+}
+
+export interface ResearchFindingListResponse {
+  findings: ResearchFinding[];
+}
+
+export interface ResearchRunOutputSummary {
+  executiveSummary: string;
+  keyFindings: string[];
+  sourceList: Array<{
+    documentId: string;
+    url: string;
+    title: string;
+  }>;
+  confidence: string;
+  limitations: string[];
+  suggestedFollowups: string[];
+}
+
 // ─── API Client Configuration ────────────────────────────────────
 
 export interface HiveMindClientConfig {

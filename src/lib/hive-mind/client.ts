@@ -32,6 +32,12 @@ import {
   type MergeHistoryResponse,
   type ReindexResponse,
   type BackfillGraphResponse,
+  type ResearchRunListResponse,
+  type CreateResearchRunRequest,
+  type CreateResearchRunResponse,
+  type ResearchRun,
+  type ResearchSourceListResponse,
+  type ResearchFindingListResponse,
 } from "./types";
 import {
   HiveMindApiError,
@@ -529,6 +535,56 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     });
   }
 
+  // ─── Research Memory ─────────────────────────────────────────
+
+  function listResearchRuns(params?: {
+    tenantId?: string;
+    projectId?: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const qs = new URLSearchParams();
+    if (params?.tenantId) qs.set("tenantId", params.tenantId);
+    if (params?.projectId) qs.set("projectId", params.projectId);
+    if (params?.status) qs.set("status", params.status);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    const query = qs.toString();
+    return request<ResearchRunListResponse>(`research/runs${query ? `?${query}` : ""}`);
+  }
+
+  function createResearchRun(input: CreateResearchRunRequest) {
+    return request<CreateResearchRunResponse>("research/runs", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  function getResearchRun(runId: string) {
+    return request<ResearchRun>(`research/runs/${encodeURIComponent(runId)}`);
+  }
+
+  function cancelResearchRun(runId: string) {
+    return request<{ success: boolean }>(`research/runs/${encodeURIComponent(runId)}/cancel`, {
+      method: "POST",
+    });
+  }
+
+  function retryResearchRun(runId: string) {
+    return request<CreateResearchRunResponse>(`research/runs/${encodeURIComponent(runId)}/retry`, {
+      method: "POST",
+    });
+  }
+
+  function getResearchRunSources(runId: string) {
+    return request<ResearchSourceListResponse>(`research/runs/${encodeURIComponent(runId)}/sources`);
+  }
+
+  function getResearchRunFindings(runId: string) {
+    return request<ResearchFindingListResponse>(`research/runs/${encodeURIComponent(runId)}/findings`);
+  }
+
   return {
     // Auth
     getMe,
@@ -579,6 +635,15 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     backfillGraph,
     reindexDocument,
     reindexTenant,
+
+    // Research Memory
+    listResearchRuns,
+    createResearchRun,
+    getResearchRun,
+    cancelResearchRun,
+    retryResearchRun,
+    getResearchRunSources,
+    getResearchRunFindings,
 
     // Raw access for one-off endpoints
     request,
