@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
+import { addLead } from "@/lib/leads/store";
 
 const VALID_PRODUCTS = ["Dilivygo", "Marlin", "Terro", "Haigo", "Review"];
-
-const leads = new Map<string, Record<string, unknown>>();
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
@@ -40,9 +39,6 @@ export async function POST(request: Request) {
 
     const duplicateKey = providedDuplicateKey || `${companyName}_${country}_${city || ""}`.toLowerCase();
 
-    const isDuplicate =
-      leads.has(sourceUrl) || leads.has(duplicateKey);
-
     const normalizedProduct = VALID_PRODUCTS.includes(product) ? product : "Needs Review";
 
     let leadStatus = status || "new";
@@ -58,10 +54,8 @@ export async function POST(request: Request) {
       leadStatus = "Needs Review";
     }
 
-    const leadId = isDuplicate ? generateId() : generateId();
-
     const lead = {
-      leadId,
+      leadId: generateId(),
       companyName,
       product: normalizedProduct,
       source,
@@ -79,22 +73,19 @@ export async function POST(request: Request) {
       aiSummary,
       rawData,
       duplicateKey,
-      isDuplicate,
+      isDuplicate: false,
       createdAt: new Date().toISOString(),
     };
 
-    if (sourceUrl) {
-      leads.set(sourceUrl, lead);
-    }
-    leads.set(duplicateKey, lead);
+    addLead(lead);
 
     return NextResponse.json({
       success: true,
-      status: isDuplicate ? "updated" : "created",
+      status: "created",
       leadId: lead.leadId,
-      isDuplicate,
+      isDuplicate: false,
       shouldSendToSlack,
-      message: isDuplicate ? "Duplicate lead updated" : "Lead created successfully",
+      message: "Lead created successfully",
     });
   } catch {
     return NextResponse.json(
@@ -102,25 +93,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
-
-export async function GET() {
-  return NextResponse.json({
-    endpoint: "POST /api/leads/ingest",
-    description: "Ingest leads from n8n or scraper",
-    requiredFields: ["companyName", "product", "source", "market", "country"],
-    optionalFields: [
-      "contactName",
-      "industry",
-      "city",
-      "sourceUrl",
-      "leadScore",
-      "intentLevel",
-      "status",
-      "painPoints",
-      "suggestedAngle",
-      "aiSummary",
-      "rawData",
-    ],
-  });
 }

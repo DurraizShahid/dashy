@@ -608,7 +608,7 @@ export default function ResearchScheduleDetailPage({
                               run.status === "completed" && "text-green-600",
                               run.status === "failed" && "text-destructive",
                               (run.status === "indexing" || run.status === "summarizing") && "text-amber-500",
-                              run.status === "pending" && "text-blue-500",
+                              run.status === "queued" && "text-blue-500",
                               run.status === "cancelled" && "text-muted-foreground"
                             )}
                           />

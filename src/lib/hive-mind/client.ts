@@ -35,6 +35,7 @@ import {
   type ResearchRunListResponse,
   type CreateResearchRunRequest,
   type CreateResearchRunResponse,
+  type RetryResearchRunResponse,
   type ResearchRun,
   type ResearchSourceListResponse,
   type ResearchFindingListResponse,
@@ -561,9 +562,22 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
   }
 
   function createResearchRun(input: CreateResearchRunRequest) {
-    return request<CreateResearchRunResponse>("research/runs", {
+    const sourceModeMap: Record<string, string> = {
+      auto: "mixed",
+      manual: "manual",
+      hybrid: "mixed",
+    };
+    const body = {
+      query: input.query,
+      sourceMode: sourceModeMap[input.sourceMode ?? "auto"] ?? "mixed",
+      tenantId: input.tenantId,
+      projectId: input.projectId,
+      maxSources: input.maxSources,
+      urls: input.urls,
+    };
+    return request<ResearchRun>("research/runs", {
       method: "POST",
-      body: JSON.stringify(input),
+      body: JSON.stringify(body),
     });
   }
 
@@ -578,7 +592,7 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
   }
 
   function retryResearchRun(runId: string) {
-    return request<CreateResearchRunResponse>(`research/runs/${encodeURIComponent(runId)}/retry`, {
+    return request<RetryResearchRunResponse>(`research/runs/${encodeURIComponent(runId)}/retry`, {
       method: "POST",
     });
   }
@@ -609,9 +623,23 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
   }
 
   function createResearchSchedule(input: CreateResearchScheduleRequest) {
+    const sourceModeMap: Record<string, string> = {
+      auto: "mixed",
+      manual: "manual",
+      hybrid: "mixed",
+    };
+    const body = {
+      query: input.query,
+      sourceMode: sourceModeMap[input.sourceMode ?? "auto"] ?? "mixed",
+      maxSources: input.maxSources,
+      recurrence: input.recurrence,
+      timezone: input.timezone,
+      tenantId: input.tenantId,
+      projectId: input.projectId,
+    };
     return request<CreateResearchScheduleResponse>("research/schedules", {
       method: "POST",
-      body: JSON.stringify(input),
+      body: JSON.stringify(body),
     });
   }
 

@@ -574,8 +574,8 @@ export interface ExtractionCost {
 
 // ─── Research Memory ────────────────────────────────────────────
 
-export type ResearchRunStatus = 'pending' | 'indexing' | 'summarizing' | 'completed' | 'failed' | 'cancelled';
-export type ResearchSourceMode = 'auto' | 'manual' | 'hybrid';
+export type ResearchRunStatus = 'queued' | 'planning' | 'searching' | 'crawling' | 'indexing' | 'summarizing' | 'completed' | 'failed' | 'cancelled';
+export type ResearchSourceMode = 'auto' | 'manual' | 'hybrid' | 'mixed';
 
 export interface ResearchRun {
   id: string;
@@ -584,9 +584,10 @@ export interface ResearchRun {
   query: string;
   status: ResearchRunStatus;
   stage?: string | null;
-  sourceMode: ResearchSourceMode;
+  sourceMode: string;
   maxSources?: number | null;
   sourceCount?: number | null;
+  createdBy?: string | null;
   outputSummary?: string | null;
   warnings?: string[] | null;
   estimatedCostUsd?: number | null;
@@ -596,6 +597,7 @@ export interface ResearchRun {
   updatedAt?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
+  failedAt?: string | null;
 }
 
 export interface ResearchRunListResponse {
@@ -610,11 +612,14 @@ export interface CreateResearchRunRequest {
   tenantId: string;
   projectId?: string;
   maxSources?: number;
-  manualUrls?: string[];
+  urls?: string[];
 }
 
-export interface CreateResearchRunResponse {
-  run: ResearchRun;
+export type CreateResearchRunResponse = ResearchRun;
+
+export interface RetryResearchRunResponse {
+  id: string;
+  status: string;
 }
 
 export interface ResearchSource {
@@ -684,7 +689,7 @@ export interface ResearchSchedule {
   tenantId: string;
   projectId?: string;
   query: string;
-  sourceMode: 'auto' | 'manual' | 'hybrid';
+  sourceMode: string;
   maxSources?: number;
   recurrence: ResearchScheduleRecurrence;
   timezone: string;
@@ -704,7 +709,7 @@ export interface ResearchScheduleListResponse {
 
 export interface CreateResearchScheduleRequest {
   query: string;
-  sourceMode?: 'auto' | 'manual' | 'hybrid';
+  sourceMode?: string;
   maxSources?: number;
   recurrence?: ResearchScheduleRecurrence;
   timezone?: string;
@@ -712,9 +717,7 @@ export interface CreateResearchScheduleRequest {
   projectId?: string;
 }
 
-export interface CreateResearchScheduleResponse {
-  schedule: ResearchSchedule;
-}
+export type CreateResearchScheduleResponse = ResearchSchedule;
 
 export interface ResearchAlert {
   id: string;

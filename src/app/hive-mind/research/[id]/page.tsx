@@ -151,7 +151,7 @@ export default function ResearchRunDetailPage({
 
   useEffect(() => {
     if (!run) return;
-    const isActive = ["pending", "indexing", "summarizing"].includes(run.status);
+    const isActive = ["queued", "planning", "searching", "crawling", "indexing", "summarizing"].includes(run.status);
     if (isActive) {
       pollRef.current = setInterval(() => {
         setRefreshKey((k) => k + 1);
@@ -187,8 +187,7 @@ export default function ResearchRunDetailPage({
     if (!client) return;
     setActionLoading("retry");
     try {
-      const res = await client.retryResearchRun(id);
-      setRun(res.run);
+      await client.retryResearchRun(id);
       setRefreshKey((k) => k + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to retry");
@@ -198,7 +197,7 @@ export default function ResearchRunDetailPage({
   }
 
   const outputSummary = run ? parseOutputSummary(run) : null;
-  const isActive = run && ["pending", "indexing", "summarizing"].includes(run.status);
+  const isActive = run && ["queued", "planning", "searching", "crawling", "indexing", "summarizing"].includes(run.status);
   const Icon = run ? (statusIcon[run.status] ?? Clock) : Clock;
 
   return (
@@ -258,7 +257,7 @@ export default function ResearchRunDetailPage({
                         run.status === "completed" && "text-green-600",
                         run.status === "failed" && "text-destructive",
                         (run.status === "indexing" || run.status === "summarizing") && "text-amber-500 animate-pulse",
-                        run.status === "pending" && "text-blue-500",
+                        run.status === "queued" && "text-blue-500",
                         run.status === "cancelled" && "text-muted-foreground"
                       )}
                     />

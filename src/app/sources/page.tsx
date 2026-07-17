@@ -2,7 +2,8 @@
 
 import { Pause, Play, FileText } from "lucide-react"
 import { mockSources } from "@/data/mock"
-import { CRMSidebar } from "@/components/crm/crm-sidebar"
+import { CRMShell } from "@/components/crm/crm-shell"
+import { AuthGate } from "@/components/crm/auth-gate"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
 import { useState } from "react"
 
@@ -39,96 +40,90 @@ export default function SourcesPage() {
   }
 
   return (
-    <div className="bg-background h-screen overflow-hidden">
-      <div className="h-full py-4 px-4">
-        <div className="h-full bg-card rounded-[36px] p-5 shadow-elevated">
-          <div className="flex gap-5 h-full">
-            <CRMSidebar />
+    <CRMShell>
+      <AuthGate authMessage="Sign in to monitor scraper health and source performance.">
+        <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0 pr-1">
+          <CRMTopbar title="Lead Sources" subtitle="Monitor scraper health and source performance" />
 
-            <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0 pr-1">
-              <CRMTopbar title="Lead Sources" subtitle="Monitor scraper health and source performance" />
-
-              <div className="grid grid-cols-3 gap-4 px-6 mb-6">
-                {sources.map((source, i) => (
-                  <div
-                    key={source.name}
-                    className="bg-card rounded-[20px] p-5 shadow-card border border-border"
+          <div className="grid grid-cols-3 gap-4 px-6 mb-6">
+            {sources.map((source, i) => (
+              <div
+                key={source.name}
+                className="bg-card rounded-[20px] p-5 shadow-card border border-border"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-poppins font-semibold text-foreground">
+                    {source.name}
+                  </h3>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusStyle(
+                      source.status
+                    )}`}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-poppins font-semibold text-foreground">
-                        {source.name}
-                      </h3>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusStyle(
-                          source.status
-                        )}`}
-                      >
-                        {source.status}
-                      </span>
-                    </div>
+                    {source.status}
+                  </span>
+                </div>
 
-                    <div className="space-y-2 mb-4 text-sm text-muted-foreground">
-                      <p>{source.leadsFound} leads found</p>
-                      <p>{source.hotLeads} hot leads</p>
-                      <p>Avg score: {source.avgScore}</p>
-                    </div>
+                <div className="space-y-2 mb-4 text-sm text-muted-foreground">
+                  <p>{source.leadsFound} leads found</p>
+                  <p>{source.hotLeads} hot leads</p>
+                  <p>Avg score: {source.avgScore}</p>
+                </div>
 
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-muted-foreground">Success Rate</span>
-                        <span className="text-xs font-medium text-foreground">
-                          {source.successRate}%
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full bg-[#E9E7F0]">
-                        <div
-                          className={`h-full rounded-full ${getProgressColor(
-                            source.successRate
-                          )}`}
-                          style={{ width: `${source.successRate}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Last run: {source.lastRun}
-                    </p>
-
-                    {source.errorCount > 0 && (
-                      <p className="text-xs text-[#C62828] font-medium mb-3">
-                        {source.errorCount} error{source.errorCount > 1 ? "s" : ""}
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => togglePause(i)}
-                        className="flex items-center gap-1.5 rounded-lg bg-muted border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                      >
-                        {source.status === "Active" ? (
-                          <>
-                            <Pause className="size-3" />
-                            Pause
-                          </>
-                        ) : (
-                          <>
-                            <Play className="size-3" />
-                            Resume
-                          </>
-                        )}
-                      </button>
-                      <button className="flex items-center gap-1.5 text-xs font-medium text-[#7060B8] hover:underline">
-                        <FileText className="size-3" />
-                        View Logs
-                      </button>
-                    </div>
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground">Success Rate</span>
+                    <span className="text-xs font-medium text-foreground">
+                      {source.successRate}%
+                    </span>
                   </div>
-                ))}
+                  <div className="h-2 rounded-full bg-[#E9E7F0]">
+                    <div
+                      className={`h-full rounded-full ${getProgressColor(
+                        source.successRate
+                      )}`}
+                      style={{ width: `${source.successRate}%` }}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground mb-2">
+                  Last run: {source.lastRun}
+                </p>
+
+                {source.errorCount > 0 && (
+                  <p className="text-xs text-[#C62828] font-medium mb-3">
+                    {source.errorCount} error{source.errorCount > 1 ? "s" : ""}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => togglePause(i)}
+                    className="flex items-center gap-1.5 rounded-lg bg-muted border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                  >
+                    {source.status === "Active" ? (
+                      <>
+                        <Pause className="size-3" />
+                        Pause
+                      </>
+                    ) : (
+                      <>
+                        <Play className="size-3" />
+                        Resume
+                      </>
+                    )}
+                  </button>
+                  <button className="flex items-center gap-1.5 text-xs font-medium text-[#7060B8] hover:underline">
+                    <FileText className="size-3" />
+                    View Logs
+                  </button>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
-    </div>
+      </AuthGate>
+    </CRMShell>
   )
 }

@@ -236,23 +236,31 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-[#F7F7F8] border-b border-[#E9E7F0]">
-                        <th className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">#</th>
-                        <th className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Description</th>
-                        <th className="text-center py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Qty</th>
-                        <th className="text-right py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Unit Price</th>
-                        <th className="text-right py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Amount</th>
+                        <th scope="col" className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">#</th>
+                        <th scope="col" className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Description</th>
+                        <th scope="col" className="text-center py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Qty</th>
+                        <th scope="col" className="text-right py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Unit Price</th>
+                        <th scope="col" className="text-right py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Amount</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {current.items.map((item, idx) => (
+                      {current.items.length > 0 ? (
+                        current.items.map((item, idx) => (
                         <tr key={item.id} className="border-b border-[#E9E7F0] last:border-0">
                           <td className="py-3 px-4 text-[#7B7592]">{idx + 1}</td>
                           <td className="py-3 px-4 text-[#28243D]">{item.description}</td>
                           <td className="py-3 px-4 text-center text-[#4D4764]">{item.quantity}</td>
                           <td className="py-3 px-4 text-right text-[#4D4764]">${item.unitPrice.toLocaleString()}</td>
                           <td className="py-3 px-4 text-right font-medium text-[#28243D]">${item.amount.toLocaleString()}</td>
-                        </tr>
-                      ))}
+                      </tr>
+                    ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-sm text-[#7B7592]">
+                          No items on this invoice.
+                        </td>
+                      </tr>
+                    )}
                     </tbody>
                   </table>
                 </div>

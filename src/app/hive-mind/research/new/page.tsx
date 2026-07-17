@@ -69,9 +69,9 @@ export default function NewResearchPage() {
         tenantId: tenantOverride,
         projectId: projectOverride || undefined,
         maxSources,
-        manualUrls: filteredUrls.length > 0 ? filteredUrls : undefined,
+        urls: filteredUrls.length > 0 ? filteredUrls : undefined,
       });
-      setResult({ status: "success", message: "Research run created", runId: res.run.id });
+      setResult({ status: "success", message: "Research run created", runId: res.id });
     } catch (err) {
       handleError(err);
     } finally {

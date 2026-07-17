@@ -1,52 +1,59 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, type ComponentType } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
-  Users,
-  Package,
-  Globe,
-  Building2,
+  UserPlus,
   Contact,
-  Activity,
-  Bell,
+  Building2,
+  ShoppingBag,
+  Globe,
+  RefreshCw,
   BarChart3,
+  Receipt,
+  Bell,
   Settings,
-  FileText,
   ChevronLeft,
   ChevronRight,
   HeartPulse,
   Wifi,
   BookOpen,
-  Upload,
-  FolderArchive,
-  Bot,
-  Key,
-  ScrollText,
-  Cog,
-  UsersRound,
-  ChartNetwork,
-  GitBranch,
   BrainCircuit,
   CalendarClock,
+  Upload,
+  FolderArchive,
+  Briefcase,
+  Bot,
+  Cog,
+  UsersRound,
+  Users,
+  ChartNetwork,
+  Gauge,
+  Flame,
+  ClipboardCheck,
+  Copy,
+  Key,
+  ScrollText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/lib/auth/use-auth"
 import { UserButton } from "@clerk/nextjs"
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { label: "Leads", icon: Users, href: "/leads" },
-  { label: "Products", icon: Package, href: "/products" },
-  { label: "Sources", icon: Globe, href: "/sources" },
-  { label: "Companies", icon: Building2, href: "/companies" },
+  { label: "Leads", icon: UserPlus, href: "/leads" },
+  { label: "Hot Leads", icon: Flame, href: "/leads/hot", indent: true },
+  { label: "Review Queue", icon: ClipboardCheck, href: "/leads/review", indent: true },
+  { label: "Duplicates", icon: Copy, href: "/leads/duplicates", indent: true },
   { label: "Contacts", icon: Contact, href: "/contacts" },
-  { label: "Scraper Runs", icon: Activity, href: "/scraper-runs" },
-  { label: "Notifications", icon: Bell, href: "/notifications" },
+  { label: "Companies", icon: Building2, href: "/companies" },
+  { label: "Products", icon: ShoppingBag, href: "/products" },
+  { label: "Lead Sources", icon: Globe, href: "/sources" },
+  { label: "Scraper Runs", icon: RefreshCw, href: "/scraper-runs" },
   { label: "Reports", icon: BarChart3, href: "/reports" },
-  { label: "Invoices", icon: FileText, href: "/invoices" },
+  { label: "Invoices", icon: Receipt, href: "/invoices" },
+  { label: "Notifications", icon: Bell, href: "/notifications" },
 ]
 
 const hiveMindItems = [
@@ -58,12 +65,15 @@ const hiveMindItems = [
   { label: "Research Schedules", icon: CalendarClock, href: "/hive-mind/research/schedules" },
   { label: "Ingest", icon: Upload, href: "/hive-mind/ingest" },
   { label: "Documents", icon: FolderArchive, href: "/hive-mind/documents" },
-  { label: "Jobs", icon: Activity, href: "/hive-mind/jobs" },
+  { label: "Jobs", icon: Briefcase, href: "/hive-mind/jobs" },
   { label: "Agents", icon: Bot, href: "/hive-mind/agents" },
-  { label: "Under the Hood", icon: Cog, href: "/hive-mind/under-the-hood" },
+  { label: "Configuration", icon: Cog, href: "/hive-mind/under-the-hood" },
   { label: "Departments", icon: UsersRound, href: "/hive-mind/departments" },
+  { label: "Employees", icon: Users, href: "/hive-mind/employees" },
   { label: "Graph Memory", icon: ChartNetwork, href: "/hive-mind/graph" },
-  { label: "Graph Quality", icon: GitBranch, href: "/hive-mind/graph/quality" },
+  { label: "Graph Quality", icon: Gauge, href: "/hive-mind/graph/quality" },
+  { label: "Graph Entities", icon: ChartNetwork, href: "/hive-mind/graph/entities", indent: true },
+  { label: "Hive Mind Settings", icon: Settings, href: "/hive-mind/settings" },
 ]
 
 const adminItems = [
@@ -87,10 +97,52 @@ function findActiveHref(pathname: string): string | null {
   return best
 }
 
+const authRoutes = ["/sign-in", "/sign-up", "/login"]
+
 export function CRMSidebar() {
   const pathname = usePathname()
-  const [expanded, setExpanded] = useState(false)
-  useAuth()
+  const [expanded, setExpanded] = useState(() => {
+    if (typeof window === "undefined") return false
+    const stored = localStorage.getItem("crm_sidebar_expanded")
+    if (stored !== null) return stored === "true"
+    return false
+  })
+  useEffect(() => {
+    localStorage.setItem("crm_sidebar_expanded", String(expanded))
+  }, [expanded])
+
+  // Cmd+B / Ctrl+B keyboard shortcut to toggle sidebar
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault()
+        setExpanded((prev) => !prev)
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [])
+
+  // Focus first nav link after expanding
+  useEffect(() => {
+    if (expanded) {
+      const firstLink = document.querySelector<HTMLAnchorElement>("#crm-sidebar [aria-label]")
+      firstLink?.focus()
+    }
+  }, [expanded])
+
+  // Scroll active item into view on route change
+  useEffect(() => {
+    const el = document.querySelector('[aria-current="page"]')
+    if (el) {
+      el.scrollIntoView({ block: "nearest" })
+    }
+  }, [pathname])
+
+  // Don't render the sidebar on auth pages
+  if (authRoutes.some((route) => pathname.startsWith(route))) {
+    return null
+  }
 
   const activeHref = useMemo(() => findActiveHref(pathname), [pathname])
 
@@ -98,43 +150,96 @@ export function CRMSidebar() {
     return href.toLowerCase() === activeHref?.toLowerCase()
   }
 
+  function renderSectionHeading(label: string) {
+    return (
+      <h2 className={cn(
+        "px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/50",
+        !expanded && "sr-only"
+      )}>
+        {label}
+      </h2>
+    )
+  }
+
+  function renderNavItem(
+    item: { label: string; icon: ComponentType<{ className?: string }>; href: string; indent?: boolean },
+    variant: "crm" | "hive-mind" | "admin"
+  ) {
+    const itemActive = isActive(item.href)
+    const isHiveMindAdmin = variant === "hive-mind" || variant === "admin"
+
+    const hasActiveChild =
+      !itemActive &&
+      activeHref &&
+      activeHref.toLowerCase().startsWith(item.href.toLowerCase() + "/")
+
+    return (
+      <li role="listitem" className={cn("shrink-0", !expanded && "flex justify-center")}>
+        <Link
+          key={item.href}
+          href={item.href}
+          aria-current={itemActive ? "page" : undefined}
+          aria-label={item.label}
+          className={cn(
+            "flex items-center gap-3 rounded-xl transition-colors shrink-0 relative",
+            expanded
+              ? cn("px-3 py-2.5 w-full", item.indent && "pl-8")
+              : "h-10 w-10 justify-center mx-auto",
+            itemActive
+              ? "bg-white/15 text-white"
+              : isHiveMindAdmin
+                ? "text-white/80 hover:bg-white/10 hover:text-white"
+                : "text-white hover:bg-white/10"
+          )}
+          title={item.label}
+        >
+          <item.icon className={cn("shrink-0", expanded && isHiveMindAdmin ? "h-4 w-4" : "h-5 w-5")} />
+          {expanded && (
+            <span className={cn("font-medium truncate", isHiveMindAdmin ? "text-xs" : "text-sm")}>
+              {item.label}
+            </span>
+          )}
+          {hasActiveChild && !expanded && (
+            <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-white/60" />
+          )}
+        </Link>
+      </li>
+    )
+  }
+
   return (
-    <div
+    <aside
+      id="crm-sidebar"
+      aria-label="Sidebar"
       className={cn(
         "flex h-full flex-col rounded-[26px] bg-gradient-to-b from-[#7060B8] to-[#504098] py-5 transition-all duration-300 shrink-0",
         expanded ? "w-[200px] px-3" : "w-[68px] px-2"
       )}
     >
-      {/* Logo */}
-      <div className={cn(
-        "mb-5 flex items-center justify-center rounded-xl bg-white/15 text-sm font-bold text-white shrink-0",
-        expanded ? "h-10 w-full" : "h-10 w-10 mx-auto"
-      )}>
+      {/* Logo — link to dashboard */}
+      <Link
+        href="/dashboard"
+        aria-label="HelpTribe"
+        className={cn(
+          "mb-5 flex items-center justify-center rounded-xl bg-white/15 text-sm font-bold text-white shrink-0",
+          expanded ? "h-10 w-full" : "h-10 w-10 mx-auto"
+        )}
+      >
         {expanded ? "HelpTribe" : "HT"}
-      </div>
+      </Link>
 
-      {/* CRM Navigation */}
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto no-scrollbar">
-        {navItems.map((item) => {
-          const itemActive = isActive(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-xl text-white transition-colors shrink-0",
-                expanded ? "px-3 py-2.5" : "h-10 w-10 justify-center mx-auto",
-                itemActive ? "bg-white/15" : "hover:bg-white/10"
-              )}
-              title={item.label}
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              {expanded && (
-                <span className="text-sm font-medium truncate">{item.label}</span>
-              )}
-            </Link>
-          )
-        })}
+      {/* Navigation */}
+      <nav aria-label="Main navigation" className="flex flex-1 flex-col overflow-y-auto no-scrollbar">
+        {/* CRM section */}
+        {renderSectionHeading("CRM")}
+
+        <ul role="list" className="flex flex-col gap-1">
+          {navItems.map((item) => (
+            <div key={item.href}>
+              {renderNavItem(item, "crm")}
+            </div>
+          ))}
+        </ul>
 
         {/* Hive Mind section */}
         <div className={cn(
@@ -142,36 +247,11 @@ export function CRMSidebar() {
           expanded ? "mx-0 mt-2 mb-1" : "mx-2 mt-2 mb-1"
         )} />
 
-        {/* Hive Mind section label */}
-        {expanded && (
-          <span className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/50">
-            Hive Mind
-          </span>
-        )}
+        {renderSectionHeading("Hive Mind")}
 
-        {/* Hive Mind items */}
-        {hiveMindItems.map((item) => {
-          const itemActive = isActive(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-xl transition-colors shrink-0",
-                expanded ? "px-3 py-2.5" : "h-10 w-10 justify-center mx-auto",
-                itemActive
-                  ? "bg-white/15 text-white"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
-              )}
-              title={item.label}
-            >
-              <item.icon className={cn("shrink-0", expanded ? "h-4 w-4" : "h-5 w-5")} />
-              {expanded && (
-                <span className="text-xs font-medium truncate">{item.label}</span>
-              )}
-            </Link>
-          )
-        })}
+        <ul role="list" className="flex flex-col gap-1">
+          {hiveMindItems.map((item) => renderNavItem(item, "hive-mind"))}
+        </ul>
 
         {/* Admin section divider */}
         <div className={cn(
@@ -179,57 +259,47 @@ export function CRMSidebar() {
           expanded ? "mx-0 mt-2 mb-1" : "mx-2 mt-2 mb-1"
         )} />
 
-        {/* Admin section label */}
-        {expanded && (
-          <span className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/50">
-            Admin
-          </span>
-        )}
+        {renderSectionHeading("Admin")}
 
-        {/* Admin items */}
-        {adminItems.map((item) => {
-          const itemActive = isActive(item.href)
-          return (
+        <ul role="list" className="flex flex-col gap-1">
+          {adminItems.map((item) => renderNavItem(item, "admin"))}
+        </ul>
+
+        {/* Settings inside nav */}
+        <div className={cn(
+          "border-t border-white/10",
+          expanded ? "mx-0 mt-2 mb-1" : "mx-2 mt-2 mb-1"
+        )} />
+
+        <ul role="list" className="flex flex-col gap-1">
+          <li role="listitem" className={cn("shrink-0", !expanded && "flex justify-center")}>
             <Link
-              key={item.href}
-              href={item.href}
+              href="/settings"
+              aria-current={isActive("/settings") ? "page" : undefined}
+              aria-label="Settings"
               className={cn(
-                "flex items-center gap-3 rounded-xl transition-colors shrink-0",
-                expanded ? "px-3 py-2.5" : "h-10 w-10 justify-center mx-auto",
-                itemActive
-                  ? "bg-white/15 text-white"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
+                "flex items-center gap-3 rounded-xl text-white transition-colors shrink-0",
+                expanded ? "px-3 py-2.5 w-full" : "h-10 w-10 justify-center mx-auto",
+                isActive("/settings") ? "bg-white/15" : "hover:bg-white/10"
               )}
-              title={item.label}
+              title="Settings"
             >
-              <item.icon className={cn("shrink-0", expanded ? "h-4 w-4" : "h-5 w-5")} />
-              {expanded && (
-                <span className="text-xs font-medium truncate">{item.label}</span>
-              )}
+              <Settings className="h-5 w-5 shrink-0" />
+              {expanded && <span className="text-sm font-medium">Settings</span>}
             </Link>
-          )
-        })}
+          </li>
+        </ul>
       </nav>
 
       {/* Bottom section */}
       <div className="mt-auto flex flex-col items-center gap-3 shrink-0 pt-3 border-t border-white/10">
-        <Link
-          href="/settings"
-          className={cn(
-            "flex items-center gap-3 rounded-xl text-white transition-colors",
-            expanded ? "px-3 py-2.5 w-full" : "h-10 w-10 justify-center",
-            isActive("/settings") ? "bg-white/15" : "hover:bg-white/10"
-          )}
-          title="Settings"
-        >
-          <Settings className="h-5 w-5 shrink-0" />
-          {expanded && <span className="text-sm font-medium">Settings</span>}
-        </Link>
-
         <button
           onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls="crm-sidebar"
+          aria-keyshortcuts="Meta+b Control+b"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors"
-          title={expanded ? "Collapse" : "Expand"}
+          title={expanded ? "Collapse sidebar" : "Expand sidebar"}
         >
           {expanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
@@ -240,6 +310,6 @@ export function CRMSidebar() {
           </div>
         </div>
       </div>
-    </div>
+    </aside>
   )
 }

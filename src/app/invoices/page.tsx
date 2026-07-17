@@ -196,13 +196,13 @@ export default function InvoicesPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-[#F7F7F8] border-b border-[#E9E7F0]">
-                        <th className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Number</th>
-                        <th className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Type</th>
-                        <th className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Client</th>
-                        <th className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Date</th>
-                        <th className="text-right py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Amount</th>
-                        <th className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Status</th>
-                        <th className="text-right py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Actions</th>
+                        <th scope="col" className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Number</th>
+                        <th scope="col" className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Type</th>
+                        <th scope="col" className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Client</th>
+                        <th scope="col" className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Date</th>
+                        <th scope="col" className="text-right py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Amount</th>
+                        <th scope="col" className="text-left py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Status</th>
+                        <th scope="col" className="text-right py-3 px-4 font-poppins font-semibold text-xs text-[#4D4764]">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -256,6 +256,7 @@ export default function InvoicesPage() {
                                 <Link
                                   href={`/invoices/${inv.id}`}
                                   className="rounded-lg p-1.5 text-[#7060B8] hover:bg-[#F0EDF6] transition-colors"
+                                  aria-label="View invoice"
                                   title="View"
                                 >
                                   <Eye className="size-4" />
@@ -263,6 +264,7 @@ export default function InvoicesPage() {
                                 <button
                                   onClick={() => downloadPdf(inv)}
                                   className="rounded-lg p-1.5 text-[#7060B8] hover:bg-[#F0EDF6] transition-colors"
+                                  aria-label="Download PDF"
                                   title="Download PDF"
                                 >
                                   <Download className="size-4" />

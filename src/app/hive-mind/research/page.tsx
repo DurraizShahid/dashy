@@ -76,7 +76,7 @@ export default function ResearchListPage() {
 
   useEffect(() => {
     const hasActive = runs.some((r) =>
-      ["pending", "indexing", "summarizing"].includes(r.status)
+      ["queued", "planning", "searching", "crawling", "indexing", "summarizing"].includes(r.status)
     );
     if (hasActive && !loading) {
       pollRef.current = setInterval(() => fetchRuns({ background: true }), POLL_INTERVAL);
@@ -114,7 +114,7 @@ export default function ResearchListPage() {
               aria-label="Filter by status"
             >
               <option value="">All statuses</option>
-              <option value="pending">Pending</option>
+              <option value="queued">Queued</option>
               <option value="indexing">Indexing</option>
               <option value="summarizing">Summarizing</option>
               <option value="completed">Completed</option>
@@ -195,7 +195,7 @@ export default function ResearchListPage() {
                           run.status === "completed" && "text-green-600",
                           run.status === "failed" && "text-destructive",
                           (run.status === "indexing" || run.status === "summarizing") && "text-amber-500",
-                          run.status === "pending" && "text-blue-500",
+                          run.status === "queued" && "text-blue-500",
                           run.status === "cancelled" && "text-muted-foreground"
                         )}
                       />

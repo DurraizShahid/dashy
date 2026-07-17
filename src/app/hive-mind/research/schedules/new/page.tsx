@@ -71,7 +71,7 @@ export default function NewResearchSchedulePage() {
         tenantId: tenantOverride,
         projectId: projectOverride || undefined,
       });
-      setResult({ status: "success", message: "Schedule created successfully", scheduleId: res.schedule.id });
+      setResult({ status: "success", message: "Schedule created successfully", scheduleId: res.id });
     } catch (err) {
       handleError(err);
     } finally {
