@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowRight } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { CRMShell } from "@/components/crm/crm-shell"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
 import { ProductBadge, ScoreBadge } from "@/components/crm/badges"
-import { mockLeads, leadsBySource } from "@/data/mock"
+import { fetchLeads } from "@/lib/crm/api"
+import type { Lead } from "@/data/types"
 
 const productCards = [
   { name: "Dilivygo Leads", count: 485, hot: 62, color: "#2E7D32", pill: "bg-[#E8F5E9] text-[#2E7D32]", barColor: "#2E7D32" },
@@ -23,9 +24,11 @@ const marketSnapshot = [
 ]
 
 export default function DashboardPage() {
+  const [leads, setLeads] = useState<Lead[]>([])
+  useEffect(() => { fetchLeads().then(setLeads) }, [])
   const [activeTab, setActiveTab] = useState<"hot" | "review">("hot")
-  const hotLeads = mockLeads.filter((l) => l.intentLevel === "Hot Lead")
-  const reviewLeads = mockLeads.filter((l) => l.status === "Needs Review" || l.intentLevel === "Unclear")
+  const hotLeads = leads.filter((l) => l.intentLevel === "Hot Lead")
+  const reviewLeads = leads.filter((l) => l.status === "Needs Review" || l.intentLevel === "Unclear")
   const displayLeads = activeTab === "hot" ? hotLeads : reviewLeads
 
   return (
@@ -121,7 +124,11 @@ export default function DashboardPage() {
           <div className="flex-1 bg-card rounded-[20px] p-5 shadow-card">
             <h3 className="font-poppins font-semibold text-foreground mb-4">Leads by Source</h3>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={leadsBySource} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+              <BarChart data={(() => {
+                const counts: Record<string, number> = {}
+                for (const l of leads) { counts[l.source] = (counts[l.source] || 0) + 1 }
+                return Object.entries(counts).map(([source, count]) => ({ source, count }))
+              })()} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
                 <XAxis
                   dataKey="source"
                   tick={{ fontSize: 11, fill: "#7B7592" }}
@@ -148,9 +155,13 @@ export default function DashboardPage() {
                   barSize={28}
                   activeBar={false}
                 >
-                  {leadsBySource.map((_, index) => (
-                    <Cell key={index} fill="#7060B8" />
-                  ))}
+                  {(() => {
+                    const counts: Record<string, number> = {}
+                    for (const l of leads) { counts[l.source] = (counts[l.source] || 0) + 1 }
+                    return Object.entries(counts).map((_, index) => (
+                      <Cell key={index} fill="#7060B8" />
+                    ))
+                  })()}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

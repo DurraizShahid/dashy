@@ -1,14 +1,16 @@
 "use client"
 
 import { Pause, Play, FileText } from "lucide-react"
-import { mockSources } from "@/data/mock"
 import { CRMShell } from "@/components/crm/crm-shell"
 import { AuthGate } from "@/components/crm/auth-gate"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { fetchSources } from "@/lib/crm/api"
+import type { SourceHealth } from "@/data/types"
 
 export default function SourcesPage() {
-  const [sources, setSources] = useState(mockSources)
+  const [sources, setSources] = useState<SourceHealth[]>([])
+  useEffect(() => { fetchSources().then(setSources) }, [])
 
   const togglePause = (index: number) => {
     setSources((prev) =>

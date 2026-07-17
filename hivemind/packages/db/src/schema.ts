@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, jsonb, timestamp, index, uniqueIndex, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, jsonb, timestamp, index, uniqueIndex, pgEnum, numeric, boolean } from 'drizzle-orm/pg-core';
 
 export const tenantStatusEnum = pgEnum('tenant_status', ['active', 'suspended', 'archived']);
 export const projectStatusEnum = pgEnum('project_status', ['active', 'archived']);
@@ -271,4 +271,188 @@ export const auditLogs = pgTable('audit_logs', {
   tenantIdIdx: index('idx_audit_logs_tenant_id').on(table.tenantId),
   actionIdx: index('idx_audit_logs_action').on(table.action),
   createdAtIdx: index('idx_audit_logs_created_at').on(table.createdAt),
+}));
+
+// ── CRM Tables ──
+
+export const leads = pgTable('leads', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  companyName: text('company_name').notNull(),
+  contactName: text('contact_name'),
+  product: text('product').notNull(),
+  industry: text('industry'),
+  market: text('market').notNull(),
+  country: text('country').notNull(),
+  city: text('city'),
+  source: text('source').notNull(),
+  sourceUrl: text('source_url'),
+  leadScore: integer('lead_score').notNull().default(0),
+  intentLevel: text('intent_level'),
+  status: text('status').notNull().default('New'),
+  painPoints: jsonb('pain_points').$type<string[]>().default([]),
+  suggestedAngle: text('suggested_angle'),
+  aiSummary: text('ai_summary'),
+  assignedUser: text('assigned_user'),
+  duplicateKey: text('duplicate_key'),
+  isDuplicate: boolean('is_duplicate').notNull().default(false),
+  rawData: jsonb('raw_data').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+  lastSeenAt: timestamp('last_seen_at'),
+}, (table) => ({
+  tenantIdIdx: index('idx_leads_tenant_id').on(table.tenantId),
+  statusIdx: index('idx_leads_status').on(table.status),
+  productIdx: index('idx_leads_product').on(table.product),
+  sourceIdx: index('idx_leads_source').on(table.source),
+  marketIdx: index('idx_leads_market').on(table.market),
+  duplicateKeyIdx: index('idx_leads_duplicate_key').on(table.duplicateKey),
+  scoreIdx: index('idx_leads_score').on(table.leadScore),
+  createdAtIdx: index('idx_leads_created_at').on(table.createdAt),
+}));
+
+export const companies = pgTable('companies', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  website: text('website'),
+  industry: text('industry'),
+  productFit: text('product_fit'),
+  country: text('country'),
+  city: text('city'),
+  phone: text('phone'),
+  email: text('email'),
+  linkedInUrl: text('linkedin_url'),
+  employeeCount: integer('employee_count'),
+  leadCount: integer('lead_count').notNull().default(0),
+  description: text('description'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => ({
+  tenantIdIdx: index('idx_companies_tenant_id').on(table.tenantId),
+  nameIdx: index('idx_companies_name').on(table.name),
+}));
+
+export const contacts = pgTable('contacts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  companyId: uuid('company_id').references(() => companies.id, { onDelete: 'set null' }),
+  companyName: text('company_name'),
+  fullName: text('full_name').notNull(),
+  jobTitle: text('job_title'),
+  email: text('email'),
+  phone: text('phone'),
+  linkedInUrl: text('linkedin_url'),
+  country: text('country'),
+  source: text('source'),
+  status: text('status').notNull().default('Active'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => ({
+  tenantIdIdx: index('idx_contacts_tenant_id').on(table.tenantId),
+  companyIdIdx: index('idx_contacts_company_id').on(table.companyId),
+}));
+
+export const invoices = pgTable('invoices', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  number: text('number').notNull(),
+  status: text('status').notNull().default('draft'),
+  date: text('date').notNull(),
+  dueDate: text('due_date').notNull(),
+  clientName: text('client_name').notNull(),
+  clientEmail: text('client_email'),
+  clientAddress: text('client_address'),
+  companyName: text('company_name'),
+  subtotal: numeric('subtotal').notNull().default('0'),
+  taxRate: numeric('tax_rate').notNull().default('0'),
+  taxAmount: numeric('tax_amount').notNull().default('0'),
+  total: numeric('total').notNull().default('0'),
+  notes: text('notes'),
+  paymentType: text('payment_type'),
+  amountPaid: numeric('amount_paid'),
+  relatedInvoiceId: uuid('related_invoice_id'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => ({
+  tenantIdIdx: index('idx_invoices_tenant_id').on(table.tenantId),
+  statusIdx: index('idx_invoices_status').on(table.status),
+  typeIdx: index('idx_invoices_type').on(table.type),
+  numberIdx: index('idx_invoices_number').on(table.number),
+}));
+
+export const invoiceItems = pgTable('invoice_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  invoiceId: uuid('invoice_id').notNull().references(() => invoices.id, { onDelete: 'cascade' }),
+  description: text('description').notNull(),
+  quantity: integer('quantity').notNull(),
+  unitPrice: numeric('unit_price').notNull().default('0'),
+  amount: numeric('amount').notNull().default('0'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  invoiceIdIdx: index('idx_invoice_items_invoice_id').on(table.invoiceId),
+}));
+
+export const scraperSources = pgTable('scraper_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  status: text('status').notNull().default('Active'),
+  leadsFound: integer('leads_found').notNull().default(0),
+  hotLeads: integer('hot_leads').notNull().default(0),
+  lastRun: timestamp('last_run'),
+  lastSuccess: timestamp('last_success'),
+  errorCount: integer('error_count').notNull().default(0),
+  successRate: integer('success_rate').notNull().default(100),
+  avgScore: integer('avg_score').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => ({
+  tenantIdIdx: index('idx_scraper_sources_tenant_id').on(table.tenantId),
+  nameIdx: index('idx_scraper_sources_name').on(table.name),
+}));
+
+export const scraperRuns = pgTable('scraper_runs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  source: text('source').notNull(),
+  startedAt: timestamp('started_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
+  duration: text('duration'),
+  leadsFound: integer('leads_found').notNull().default(0),
+  leadsAdded: integer('leads_added').notNull().default(0),
+  duplicatesSkipped: integer('duplicates_skipped').notNull().default(0),
+  errors: integer('errors').notNull().default(0),
+  status: text('status').notNull().default('Running'),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  tenantIdIdx: index('idx_scraper_runs_tenant_id').on(table.tenantId),
+  sourceIdx: index('idx_scraper_runs_source').on(table.source),
+  statusIdx: index('idx_scraper_runs_status').on(table.status),
+}));
+
+export const crmNotifications = pgTable('crm_notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  channel: text('channel').notNull(),
+  type: text('type').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  config: jsonb('config').$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => ({
+  tenantIdIdx: index('idx_crm_notifications_tenant_id').on(table.tenantId),
+}));
+
+export const crmSettings = pgTable('crm_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  key: text('key').notNull(),
+  value: jsonb('value').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => ({
+  tenantIdKeyIdx: uniqueIndex('idx_crm_settings_tenant_key').on(table.tenantId, table.key),
 }));

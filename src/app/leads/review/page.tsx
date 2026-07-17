@@ -1,15 +1,18 @@
 "use client"
 
-import { mockLeads } from "@/data/mock"
+import { useState, useEffect } from "react"
 import { CRMShell } from "@/components/crm/crm-shell"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
 import { ProductBadge, ScoreBadge, StatusBadge, SourceBadge, IntentBadge } from "@/components/crm/badges"
-
-const reviewLeads = mockLeads.filter(
-  (lead) => lead.status === "Needs Review" || lead.intentLevel === "Unclear"
-)
+import { fetchLeads } from "@/lib/crm/api"
+import type { Lead } from "@/data/types"
 
 export default function ReviewQueuePage() {
+  const [allLeads, setAllLeads] = useState<Lead[]>([])
+  useEffect(() => { fetchLeads().then(setAllLeads) }, [])
+  const reviewLeads = allLeads.filter(
+    (lead) => lead.status === "Needs Review" || lead.intentLevel === "Unclear"
+  )
   return (
     <CRMShell>
       <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0 pr-1">

@@ -1,13 +1,17 @@
 "use client"
 
-import { mockContacts } from "@/data/mock"
+import { useState, useEffect } from "react"
 import { CRMShell } from "@/components/crm/crm-shell"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
 import { SourceBadge, StatusBadge } from "@/components/crm/badges"
+import { fetchContacts } from "@/lib/crm/api"
+import type { Contact } from "@/data/types"
 
 export default function ContactsPage() {
-  const companies = [...new Set(mockContacts.map((c) => c.companyName))].length
-  const countries = [...new Set(mockContacts.map((c) => c.country))].length
+  const [contacts, setContacts] = useState<Contact[]>([])
+  useEffect(() => { fetchContacts().then(setContacts) }, [])
+  const companies = [...new Set(contacts.map((c) => c.companyName))].length
+  const countries = [...new Set(contacts.map((c) => c.country))].length
 
   return (
     <CRMShell>
@@ -16,7 +20,7 @@ export default function ContactsPage() {
 
         <div className="flex flex-wrap gap-3 px-6 mb-4">
           <span className="rounded-full bg-[#F0EDF6] text-[#7060B8] px-4 py-1.5 text-xs font-medium">
-            {mockContacts.length} Contacts
+            {contacts.length} Contacts
           </span>
           <span className="rounded-full bg-[#E3F2FD] text-[#1565C0] px-4 py-1.5 text-xs font-medium">
             {companies} Companies
@@ -41,8 +45,8 @@ export default function ContactsPage() {
                 </tr>
               </thead>
               <tbody>
-                {mockContacts.length > 0 ? (
-                  mockContacts.map((contact) => {
+                {contacts.length > 0 ? (
+                  contacts.map((contact) => {
                   const initials = contact.fullName
                     .split(" ")
                     .map((n) => n[0])

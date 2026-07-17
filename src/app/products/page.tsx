@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Users, Flame, Sparkles, Bell } from "lucide-react"
 import { CRMShell } from "@/components/crm/crm-shell"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
 import { IntentBadge, StatusBadge, SourceBadge, ScoreBadge } from "@/components/crm/badges"
-import { mockLeads } from "@/data/mock"
+import { fetchLeads } from "@/lib/crm/api"
+import type { Lead } from "@/data/types"
 
 const products = [
   {
@@ -95,9 +96,11 @@ const products = [
 ]
 
 export default function ProductsPage() {
+  const [allLeads, setAllLeads] = useState<Lead[]>([])
+  useEffect(() => { fetchLeads().then(setAllLeads) }, [])
   const [selectedProduct, setSelectedProduct] = useState(products[0].name)
   const product = products.find((p) => p.name === selectedProduct) || products[0]
-  const productLeads = mockLeads.filter((l) => l.product === product.name)
+  const productLeads = allLeads.filter((l) => l.product === product.name)
   const maxSourceCount = Math.max(...product.sources.map((s) => s.count))
   const maxMarketCount = Math.max(...product.markets.map((m) => m.count))
 

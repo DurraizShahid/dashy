@@ -1,19 +1,40 @@
 "use client"
 
-import { mockScraperRuns } from "@/data/mock"
+import { useState, useEffect } from "react"
 import { SourceBadge } from "@/components/crm/badges"
 import { CRMShell } from "@/components/crm/crm-shell"
 import { AuthGate } from "@/components/crm/auth-gate"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
+import { fetchSources } from "@/lib/crm/api"
+import type { ScraperRun } from "@/data/types"
 
-const stats = [
-  { label: "Total Runs", count: "5", bg: "bg-[#F0EDF6]", text: "text-[#7060B8]" },
-  { label: "Completed", count: "3", bg: "bg-[#E8F5E9]", text: "text-[#2E7D32]" },
-  { label: "Running", count: "1", bg: "bg-[#E3F2FD]", text: "text-[#1565C0]" },
-  { label: "Failed", count: "1", bg: "bg-[#FFEBEE]", text: "text-[#C62828]" },
-]
+function computeStats(runs: ScraperRun[]) {
+  const total = runs.length
+  const completed = runs.filter(r => r.status === "Completed").length
+  const running = runs.filter(r => r.status === "Running").length
+  const failed = runs.filter(r => r.status === "Failed").length
+  return [
+    { label: "Total Runs", count: String(total), bg: "bg-[#F0EDF6]", text: "text-[#7060B8]" },
+    { label: "Completed", count: String(completed), bg: "bg-[#E8F5E9]", text: "text-[#2E7D32]" },
+    { label: "Running", count: String(running), bg: "bg-[#E3F2FD]", text: "text-[#1565C0]" },
+    { label: "Failed", count: String(failed), bg: "bg-[#FFEBEE]", text: "text-[#C62828]" },
+  ]
+}
 
 export default function ScraperRunsPage() {
+  const [runs, setRuns] = useState<ScraperRun[]>([])
+  useEffect(() => { fetchSources().then((sources) => {
+    const allRuns: ScraperRun[] = []
+    let loaded = 0
+    for (const src of sources) {
+      fetch(`/api/crm/sources/${encodeURIComponent(src.name)}/runs?limit=10`)
+        .then(r => r.json())
+        .then(d => { if (d.success) allRuns.push(...(d.data ?? [])) })
+        .finally(() => { loaded++; if (loaded === sources.length) setRuns([...allRuns]) })
+    }
+    if (sources.length === 0) setRuns([])
+  }) }, [])
+  const stats = computeStats(runs)
   return (
     <CRMShell>
       <AuthGate authMessage="Sign in to view scraper run history and logs.">
@@ -49,8 +70,8 @@ export default function ScraperRunsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockScraperRuns.length > 0 ? (
-                    mockScraperRuns.map((run) => (
+                  {runs.length > 0 ? (
+                    runs.map((run) => (
                     <tr key={run.id} className="border-b border-border hover:bg-muted transition-colors">
                       <td className="px-4 py-3 text-sm text-foreground font-medium">{run.id}</td>
                       <td className="px-4 py-3"><SourceBadge source={run.source} /></td>

@@ -1,13 +1,17 @@
 "use client"
 
-import { mockCompanies } from "@/data/mock"
+import { useState, useEffect } from "react"
 import { CRMShell } from "@/components/crm/crm-shell"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
 import { ProductBadge } from "@/components/crm/badges"
+import { fetchCompanies } from "@/lib/crm/api"
+import type { Company } from "@/data/types"
 
 export default function CompaniesPage() {
-  const countries = [...new Set(mockCompanies.map((c) => c.country))].length
-  const products = [...new Set(mockCompanies.map((c) => c.productFit))].length
+  const [companies, setCompanies] = useState<Company[]>([])
+  useEffect(() => { fetchCompanies().then(setCompanies) }, [])
+  const countries = [...new Set(companies.map((c) => c.country))].length
+  const products = [...new Set(companies.map((c) => c.productFit))].length
 
   return (
     <CRMShell>
@@ -16,7 +20,7 @@ export default function CompaniesPage() {
 
         <div className="flex flex-wrap gap-3 px-6 mb-4">
           <span className="rounded-full bg-[#F0EDF6] text-[#7060B8] px-4 py-1.5 text-xs font-medium">
-            {mockCompanies.length} Companies
+            {companies.length} Companies
           </span>
           <span className="rounded-full bg-[#E3F2FD] text-[#1565C0] px-4 py-1.5 text-xs font-medium">
             {countries} Countries
@@ -42,8 +46,8 @@ export default function CompaniesPage() {
                 </tr>
               </thead>
               <tbody>
-                {mockCompanies.length > 0 ? (
-                  mockCompanies.map((company) => (
+                {companies.length > 0 ? (
+                  companies.map((company) => (
                   <tr
                     key={company.id}
                     className="border-b border-border hover:bg-muted transition-colors"
