@@ -38,6 +38,12 @@ import {
   type ResearchRun,
   type ResearchSourceListResponse,
   type ResearchFindingListResponse,
+  type ResearchScheduleListResponse,
+  type CreateResearchScheduleRequest,
+  type CreateResearchScheduleResponse,
+  type ResearchSchedule,
+  type ResearchAlertListResponse,
+  type ResearchAlert,
 } from "./types";
 import {
   HiveMindApiError,
@@ -585,6 +591,81 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     return request<ResearchFindingListResponse>(`research/runs/${encodeURIComponent(runId)}/findings`);
   }
 
+  // ─── Research Schedules ─────────────────────────────────────────
+
+  function listResearchSchedules(params?: {
+    tenantId?: string;
+    projectId?: string;
+    enabled?: boolean;
+    limit?: number;
+  }) {
+    const qs = new URLSearchParams();
+    if (params?.tenantId) qs.set("tenantId", params.tenantId);
+    if (params?.projectId) qs.set("projectId", params.projectId);
+    if (params?.enabled !== undefined) qs.set("enabled", String(params.enabled));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    const query = qs.toString();
+    return request<ResearchScheduleListResponse>(`research/schedules${query ? `?${query}` : ""}`);
+  }
+
+  function createResearchSchedule(input: CreateResearchScheduleRequest) {
+    return request<CreateResearchScheduleResponse>("research/schedules", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  function getResearchSchedule(scheduleId: string) {
+    return request<ResearchSchedule>(`research/schedules/${encodeURIComponent(scheduleId)}`);
+  }
+
+  function updateResearchSchedule(scheduleId: string, input: Partial<CreateResearchScheduleRequest>) {
+    return request<ResearchSchedule>(`research/schedules/${encodeURIComponent(scheduleId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  }
+
+  function deleteResearchSchedule(scheduleId: string) {
+    return request<void>(`research/schedules/${encodeURIComponent(scheduleId)}`, { method: "DELETE" });
+  }
+
+  function runResearchScheduleNow(scheduleId: string) {
+    return request<{ runId: string }>(`research/schedules/${encodeURIComponent(scheduleId)}/run-now`, { method: "POST" });
+  }
+
+  function listResearchScheduleRuns(scheduleId: string, params?: { limit?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set("limit", String(params.limit));
+    const query = qs.toString();
+    return request<ResearchRunListResponse>(`research/schedules/${encodeURIComponent(scheduleId)}/runs${query ? `?${query}` : ""}`);
+  }
+
+  // ─── Research Alerts ────────────────────────────────────────────
+
+  function listResearchAlerts(params?: {
+    tenantId?: string;
+    projectId?: string;
+    scheduleId?: string;
+    acknowledged?: boolean;
+    severity?: string;
+    limit?: number;
+  }) {
+    const qs = new URLSearchParams();
+    if (params?.tenantId) qs.set("tenantId", params.tenantId);
+    if (params?.projectId) qs.set("projectId", params.projectId);
+    if (params?.scheduleId) qs.set("scheduleId", params.scheduleId);
+    if (params?.acknowledged !== undefined) qs.set("acknowledged", String(params.acknowledged));
+    if (params?.severity) qs.set("severity", params.severity);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    const query = qs.toString();
+    return request<ResearchAlertListResponse>(`research/alerts${query ? `?${query}` : ""}`);
+  }
+
+  function acknowledgeResearchAlert(alertId: string) {
+    return request<ResearchAlert>(`research/alerts/${encodeURIComponent(alertId)}/acknowledge`, { method: "POST" });
+  }
+
   return {
     // Auth
     getMe,
@@ -644,6 +725,19 @@ export function createClient(config?: Partial<HiveMindClientConfig>) {
     retryResearchRun,
     getResearchRunSources,
     getResearchRunFindings,
+
+    // Research Schedules
+    listResearchSchedules,
+    createResearchSchedule,
+    getResearchSchedule,
+    updateResearchSchedule,
+    deleteResearchSchedule,
+    runResearchScheduleNow,
+    listResearchScheduleRuns,
+
+    // Research Alerts
+    listResearchAlerts,
+    acknowledgeResearchAlert,
 
     // Raw access for one-off endpoints
     request,

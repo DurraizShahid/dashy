@@ -673,6 +673,72 @@ export interface ResearchRunOutputSummary {
   suggestedFollowups: string[];
 }
 
+// ─── Research Schedules ─────────────────────────────────────────
+
+export type ResearchScheduleRecurrence = 'daily' | 'weekly' | 'monthly' | 'disabled';
+export type ResearchAlertSeverity = 'info' | 'warning' | 'critical';
+export type ResearchChangeType = 'new_source' | 'new_finding' | 'changed_finding' | 'new_high_confidence_claim' | 'new_entity';
+
+export interface ResearchSchedule {
+  id: string;
+  tenantId: string;
+  projectId?: string;
+  query: string;
+  sourceMode: 'auto' | 'manual' | 'hybrid';
+  maxSources?: number;
+  recurrence: ResearchScheduleRecurrence;
+  timezone: string;
+  nextRunAt?: string;
+  lastRunAt?: string;
+  enabled: boolean;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResearchScheduleListResponse {
+  schedules: ResearchSchedule[];
+  total?: number;
+  nextCursor?: string;
+}
+
+export interface CreateResearchScheduleRequest {
+  query: string;
+  sourceMode?: 'auto' | 'manual' | 'hybrid';
+  maxSources?: number;
+  recurrence?: ResearchScheduleRecurrence;
+  timezone?: string;
+  tenantId: string;
+  projectId?: string;
+}
+
+export interface CreateResearchScheduleResponse {
+  schedule: ResearchSchedule;
+}
+
+export interface ResearchAlert {
+  id: string;
+  tenantId: string;
+  projectId?: string;
+  scheduleId?: string;
+  runId?: string;
+  severity: ResearchAlertSeverity;
+  title: string;
+  summary?: string;
+  changeType: ResearchChangeType;
+  sourceUrls: string[];
+  acknowledged: boolean;
+  acknowledgedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResearchAlertListResponse {
+  alerts: ResearchAlert[];
+  total?: number;
+  nextCursor?: string;
+}
+
 // ─── API Client Configuration ────────────────────────────────────
 
 export interface HiveMindClientConfig {

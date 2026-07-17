@@ -50,9 +50,9 @@ export default function ResearchListPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchRuns = useCallback(async () => {
+  const fetchRuns = useCallback(async (opts?: { background?: boolean }) => {
     if (!client || !selectedTenantId) return;
-    setLoading(true);
+    if (!opts?.background) setLoading(true);
     setError(null);
     try {
       const res = await client.listResearchRuns({
@@ -65,7 +65,7 @@ export default function ResearchListPage() {
       setError(err instanceof Error ? err.message : "Failed to load research runs");
       setRuns([]);
     } finally {
-      setLoading(false);
+      if (!opts?.background) setLoading(false);
     }
   }, [client, selectedTenantId, selectedProjectId, statusFilter]);
 
@@ -79,7 +79,7 @@ export default function ResearchListPage() {
       ["pending", "indexing", "summarizing"].includes(r.status)
     );
     if (hasActive && !loading) {
-      pollRef.current = setInterval(fetchRuns, POLL_INTERVAL);
+      pollRef.current = setInterval(() => fetchRuns({ background: true }), POLL_INTERVAL);
     }
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -100,7 +100,7 @@ export default function ResearchListPage() {
           <div className="flex items-center gap-2">
             <Filter className="size-4 text-muted-foreground" />
             <button
-              onClick={fetchRuns}
+              onClick={() => fetchRuns()}
               disabled={loading}
               className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="Refresh"

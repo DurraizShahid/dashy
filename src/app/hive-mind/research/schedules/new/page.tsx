@@ -5,29 +5,43 @@ import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
-import type { ResearchSourceMode } from "@/lib/hive-mind/types";
+import type { ResearchScheduleRecurrence, ResearchSourceMode } from "@/lib/hive-mind/types";
 import {
   ArrowLeft,
   Loader2,
   CheckCircle,
   XCircle,
-  BrainCircuit,
-  Plus,
-  Trash2,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function NewResearchPage() {
+const TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Berlin",
+  "Europe/Paris",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Asia/Kolkata",
+  "Australia/Sydney",
+];
+
+export default function NewResearchSchedulePage() {
   const { client, selectedTenantId, selectedProjectId, tenants, projects } = useHiveMind();
 
   const [query, setQuery] = useState("");
   const [sourceMode, setSourceMode] = useState<ResearchSourceMode>("auto");
   const [maxSources, setMaxSources] = useState(10);
-  const [manualUrls, setManualUrls] = useState<string[]>([""]);
+  const [recurrence, setRecurrence] = useState<ResearchScheduleRecurrence>("daily");
+  const [timezone, setTimezone] = useState("UTC");
   const [tenantOverride, setTenantOverride] = useState(selectedTenantId ?? "");
   const [projectOverride, setProjectOverride] = useState(selectedProjectId ?? "");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ status: "success" | "error"; message: string; runId?: string } | null>(null);
+  const [result, setResult] = useState<{ status: "success" | "error"; message: string; scheduleId?: string } | null>(null);
 
   const handleError = useCallback((err: unknown) => {
     if (err instanceof HiveMindApiError) {
@@ -35,25 +49,11 @@ export default function NewResearchPage() {
     } else if (err instanceof HiveMindNetworkError) {
       setResult({ status: "error", message: err.message });
     } else {
-      setResult({ status: "error", message: err instanceof Error ? err.message : "Failed to create research run" });
+      setResult({ status: "error", message: err instanceof Error ? err.message : "Failed to create schedule" });
     }
   }, []);
 
-  function addUrlField() {
-    setManualUrls((prev) => [...prev, ""]);
-  }
-
-  function removeUrlField(index: number) {
-    if (manualUrls.length <= 1) return;
-    setManualUrls((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function updateUrl(index: number, value: string) {
-    setManualUrls((prev) => prev.map((u, i) => (i === index ? value : u)));
-  }
-
-  const hasManualUrls = sourceMode === "auto" || manualUrls.some((u) => u.trim().length > 0);
-  const canSubmit = !!query.trim() && !!tenantOverride && !loading && hasManualUrls;
+  const canSubmit = !!query.trim() && !!tenantOverride && !loading;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,16 +62,16 @@ export default function NewResearchPage() {
     setLoading(true);
     setResult(null);
     try {
-      const filteredUrls = manualUrls.map((u) => u.trim()).filter(Boolean);
-      const res = await client!.createResearchRun({
+      const res = await client!.createResearchSchedule({
         query: query.trim(),
         sourceMode,
+        maxSources,
+        recurrence,
+        timezone,
         tenantId: tenantOverride,
         projectId: projectOverride || undefined,
-        maxSources,
-        manualUrls: filteredUrls.length > 0 ? filteredUrls : undefined,
       });
-      setResult({ status: "success", message: "Research run created", runId: res.run.id });
+      setResult({ status: "success", message: "Schedule created successfully", scheduleId: res.schedule.id });
     } catch (err) {
       handleError(err);
     } finally {
@@ -82,17 +82,17 @@ export default function NewResearchPage() {
   return (
     <>
       <CRMTopbar
-        title="New Research"
-        subtitle="Create an automated research run"
+        title="New Research Schedule"
+        subtitle="Create an automated recurring research run"
       />
 
       <div className="px-6 pb-6 max-w-2xl space-y-4">
         <Link
-          href="/hive-mind/research"
+          href="/hive-mind/research/schedules"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-4" />
-          Back to Research
+          Back to Schedules
         </Link>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -102,14 +102,14 @@ export default function NewResearchPage() {
               Research Query
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
-              What do you want to research? Be specific to get better results.
+              What should this schedule research? Be specific to get better results.
             </p>
             <div>
-              <label htmlFor="research-query" className="text-xs font-medium text-foreground mb-1 block">
+              <label htmlFor="schedule-query" className="text-xs font-medium text-foreground mb-1 block">
                 Query
               </label>
               <textarea
-                id="research-query"
+                id="schedule-query"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="e.g., What are the latest trends in AI-powered CRM?"
@@ -120,6 +120,60 @@ export default function NewResearchPage() {
                   "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 )}
               />
+            </div>
+          </div>
+
+          {/* Schedule Configuration */}
+          <div className="rounded-[20px] bg-card p-6 shadow-card">
+            <h3 className="font-poppins font-semibold text-foreground mb-1">
+              Schedule Configuration
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Set how often this research should run.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-foreground mb-1 block">
+                  Recurrence
+                </label>
+                <div className="flex gap-1 rounded-xl bg-muted p-1">
+                  {(["daily", "weekly", "monthly", "disabled"] as const).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRecurrence(r)}
+                      className={cn(
+                        "flex-1 inline-flex items-center justify-center gap-2 h-8 rounded-lg text-xs font-medium capitalize transition-colors",
+                        recurrence === r
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {r === "disabled" ? "Off" : r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="timezone-select" className="text-xs font-medium text-foreground mb-1 block">
+                  Timezone
+                </label>
+                <select
+                  id="timezone-select"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className={cn(
+                    "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm outline-none",
+                    "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground"
+                  )}
+                >
+                  {TIMEZONES.map((tz) => (
+                    <option key={tz} value={tz}>{tz}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -156,8 +210,8 @@ export default function NewResearchPage() {
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1">
                   {sourceMode === "auto" && "Automatically discover and crawl relevant sources."}
-                  {sourceMode === "manual" && "Use only the URLs you provide below."}
-                  {sourceMode === "hybrid" && "Combine auto-discovered sources with your manual URLs."}
+                  {sourceMode === "manual" && "Use only manually provided URLs."}
+                  {sourceMode === "hybrid" && "Combine auto-discovered sources with manual URLs."}
                 </p>
               </div>
 
@@ -179,48 +233,6 @@ export default function NewResearchPage() {
                 />
               </div>
             </div>
-
-            {/* Manual URLs */}
-            {(sourceMode === "manual" || sourceMode === "hybrid") && (
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-foreground">
-                    Manual URLs
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addUrlField}
-                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                  >
-                    <Plus className="size-3" />
-                    Add URL
-                  </button>
-                </div>
-                {manualUrls.map((url, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <input
-                      type="url"
-                      value={url}
-                      onChange={(e) => updateUrl(i, e.target.value)}
-                      placeholder="https://example.com/article"
-                      className={cn(
-                        "flex-1 h-10 rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
-                        "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                      )}
-                    />
-                    {manualUrls.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeUrlField(i)}
-                        className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Tenant/Project Override */}
@@ -229,7 +241,7 @@ export default function NewResearchPage() {
               Scope
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Select the organization and project context for this research.
+              Select the organization and project context for this schedule.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -291,8 +303,8 @@ export default function NewResearchPage() {
                 </>
               ) : (
                 <>
-                  <BrainCircuit className="size-4" />
-                  Start Research
+                  <CalendarClock className="size-4" />
+                  Create Schedule
                 </>
               )}
             </button>
@@ -317,16 +329,24 @@ export default function NewResearchPage() {
               )}
               <div>
                 <p className="text-sm font-medium text-foreground">{result.message}</p>
-                {result.runId && (
+                {result.scheduleId && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Run:{" "}
+                    Schedule:{" "}
                     <Link
-                      href={`/hive-mind/research/${result.runId}`}
+                      href={`/hive-mind/research/schedules/${result.scheduleId}`}
                       className="font-medium text-primary hover:underline"
                     >
-                      {result.runId.slice(0, 8)}...
+                      {result.scheduleId.slice(0, 8)}...
                     </Link>
                   </p>
+                )}
+                {result.status === "success" && (
+                  <Link
+                    href="/hive-mind/research/schedules"
+                    className="inline-flex items-center gap-1 mt-2 text-sm font-medium text-primary hover:underline"
+                  >
+                    View all schedules
+                  </Link>
                 )}
               </div>
             </div>

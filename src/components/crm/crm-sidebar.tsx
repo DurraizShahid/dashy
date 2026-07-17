@@ -30,6 +30,7 @@ import {
   ChartNetwork,
   GitBranch,
   BrainCircuit,
+  CalendarClock,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth/use-auth"
@@ -54,6 +55,7 @@ const hiveMindItems = [
   { label: "Services", icon: Wifi, href: "/hive-mind/services" },
   { label: "Knowledge", icon: BookOpen, href: "/hive-mind/knowledge" },
   { label: "Research Memory", icon: BrainCircuit, href: "/hive-mind/research" },
+  { label: "Research Schedules", icon: CalendarClock, href: "/hive-mind/research/schedules" },
   { label: "Ingest", icon: Upload, href: "/hive-mind/ingest" },
   { label: "Documents", icon: FolderArchive, href: "/hive-mind/documents" },
   { label: "Jobs", icon: Activity, href: "/hive-mind/jobs" },

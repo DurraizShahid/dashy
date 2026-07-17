@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HiveMindApiError } from "@/lib/hive-mind/errors";

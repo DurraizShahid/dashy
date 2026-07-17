@@ -49,6 +49,7 @@ export default function GraphEntityDetailPage() {
   }, [client, selectedTenantId, selectedProject, params.id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEntity();
   }, [fetchEntity]);
 

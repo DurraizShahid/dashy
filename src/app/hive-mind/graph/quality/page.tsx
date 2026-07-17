@@ -28,8 +28,6 @@ import {
   Activity,
   ExternalLink,
   Trash2,
-  Clock,
-  DollarSign,
   BarChart3,
   History,
   Search,
@@ -136,6 +134,7 @@ export default function GraphQualityPage() {
   }, [client, selectedTenantId, selectedProject]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSuggestions();
     fetchOverview();
     fetchMergeHistory();

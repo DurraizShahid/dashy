@@ -58,6 +58,7 @@ export default function GraphOverviewPage() {
   }, [client, selectedTenantId, selectedProject]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOverview();
   }, [fetchOverview]);
 

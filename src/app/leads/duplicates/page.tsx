@@ -3,7 +3,7 @@
 import { mockLeads } from "@/data/mock"
 import { CRMSidebar } from "@/components/crm/crm-sidebar"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
-import { ProductBadge, ScoreBadge, StatusBadge, SourceBadge } from "@/components/crm/badges"
+import { ScoreBadge, StatusBadge, SourceBadge } from "@/components/crm/badges"
 
 const duplicateLeads = mockLeads.filter((lead) => lead.status === "Duplicate")
 const displayLeads = duplicateLeads.length > 0 ? duplicateLeads : mockLeads

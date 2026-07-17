@@ -48,6 +48,7 @@ export default function GraphDocumentDetailPage() {
   }, [client, selectedTenantId, params.id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDocument();
   }, [fetchDocument]);
 

@@ -147,3 +147,45 @@
 ### Next sprint
 
 **Autonomous Research Memory** — persistent cross-session memory that agents autonomously read and write during research tasks, grounded in the graph knowledge base.
+
+---
+
+## Baseline: Research Memory v1 Final
+
+| Field            | Value                                                           |
+|------------------|-----------------------------------------------------------------|
+| **Tag**          | `dashy-research-memory-v1-final`                                |
+| **Commit SHA**   | `9cb1a25`                                                       |
+| **Date**         | 2026-07-17                                                      |
+| **Branch**       | `main`                                                          |
+
+### What is stable
+
+- All Graph Intelligence v1 Final stable features
+- Research search page with provider selection (searxng/perplexica/mixed/manual)
+- Research runs history and detail views with status tracking
+- Research schedules list page with create, edit, delete, run-now actions
+- Research schedule detail page with runs, alerts, and settings
+- Research alerts management with severity badges and acknowledgment
+- Schedule create/edit form with provider, query, sources, recurrence, and notify settings
+- Run-now confirmation dialog with result display
+- Empty states, error handling, and toast notifications across all research pages
+- All 44 pages build successfully, lint passes with 0 errors
+
+### What not to change casually
+
+- All Graph Intelligence "not to change" items
+- Page routing structure under `/hive-mind/research/`
+- API client methods: searchResearch, getResearchRun, listResearchRuns, listResearchSchedules, getResearchSchedule, createResearchSchedule, updateResearchSchedule, deleteResearchSchedule, runResearchScheduleNow, listResearchAlerts, acknowledgeResearchAlert
+- Schedule form state management and validation logic
+- Run-now flow and confirmation dialog
+- Alert severity badge mapping and acknowledgment handlers
+
+### Known Limitations
+
+- No real-time polling for run status (manual refresh)
+- Schedule form does not validate cron expressions client-side
+
+### Tags to create
+
+- Frontend: `dashy-research-memory-v1-final`

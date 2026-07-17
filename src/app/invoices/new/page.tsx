@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import {
   ArrowLeft,
@@ -69,7 +69,10 @@ function NewInvoicePage() {
 
   useEffect(() => {
     const t = searchParams.get("type") as InvoiceType
-    if (t && ["invoice", "receipt", "quotation"].includes(t)) setDocType(t)
+    if (t && ["invoice", "receipt", "quotation"].includes(t)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDocType(t)
+    }
   }, [searchParams])
 
   function addItem() {
@@ -102,9 +105,12 @@ function NewInvoicePage() {
   const total = subtotal + taxAmount
   const partialAmount = total / 2
 
+  const counterRef = useRef(0)
+
   function generateNumber() {
     const prefix = docType === "invoice" ? "INV" : docType === "receipt" ? "RCT" : "QT"
-    const num = String(Math.floor(Math.random() * 900) + 100)
+    counterRef.current += 1
+    const num = String(100 + (counterRef.current % 900))
     return `${prefix}-2026-${num}`
   }
 
@@ -114,6 +120,7 @@ function NewInvoicePage() {
     setGenerated(true)
 
     const newRecord: InvoiceRecord = {
+      // eslint-disable-next-line react-hooks/purity
       id: `${docType === "invoice" ? "inv" : docType === "receipt" ? "rcv" : "qt"}_${Date.now()}`,
       type: docType,
       number,

@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { CRMSidebar } from "@/components/crm/crm-sidebar"
 import { CRMTopbar } from "@/components/crm/crm-topbar"
 

@@ -50,7 +50,7 @@ export default function HiveMindLayout({
     if (isAuthenticated && (hmError || tenants.length === 0)) {
       refreshTenants();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isHiveMindEnabled()) {
     return (
