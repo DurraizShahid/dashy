@@ -17,31 +17,14 @@ import {
   Bell,
   ToggleLeft,
   ToggleRight,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { recurrenceLabels, formatNextRun } from "@/lib/hive-mind/status-config";
 
 const POLL_INTERVAL = 30000;
-
-const recurrenceLabels: Record<string, string> = {
-  daily: "Daily",
-  weekly: "Weekly",
-  monthly: "Monthly",
-  disabled: "Disabled",
-};
-
-function formatNextRun(nextRunAt: string | undefined): string {
-  if (!nextRunAt) return "Not scheduled";
-  const now = Date.now();
-  const target = new Date(nextRunAt).getTime();
-  const diff = target - now;
-  if (diff <= 0) return "Running now";
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `in ${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `in ${hrs}h ${mins % 60}m`;
-  const days = Math.floor(hrs / 24);
-  return `in ${days}d ${hrs % 24}h`;
-}
+const VISIBLE_COUNT = 20;
+const STATUS_OPTIONS = ["all", "enabled", "disabled"] as const;
 
 export default function ResearchScheduleListPage() {
   const { client, selectedTenantId, selectedProjectId, selectedTenant } = useHiveMind();
@@ -52,8 +35,11 @@ export default function ResearchScheduleListPage() {
   const [error, setError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_OPTIONS)[number]>("all");
+  const [showAll, setShowAll] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [, setTick] = useState(0);
 
   const fetchSchedules = useCallback(async () => {
     if (!client || !selectedTenantId) return;
@@ -82,8 +68,8 @@ export default function ResearchScheduleListPage() {
         acknowledged: false,
       });
       setAlerts(res.alerts ?? []);
-    } catch {
-      // best-effort
+    } catch (err) {
+      console.error("Failed to fetch alerts", err);
     }
   }, [client, selectedTenantId, selectedProjectId]);
 
@@ -97,7 +83,6 @@ export default function ResearchScheduleListPage() {
 
   useEffect(() => {
     pollRef.current = setInterval(() => {
-      setTick((t) => t + 1);
       fetchSchedules();
       fetchAlerts();
     }, POLL_INTERVAL);
@@ -106,17 +91,25 @@ export default function ResearchScheduleListPage() {
     };
   }, [fetchSchedules, fetchAlerts]);
 
+  useEffect(() => {
+    if (!successMessage) return;
+    const t = setTimeout(() => setSuccessMessage(null), 3000);
+    return () => clearTimeout(t);
+  }, [successMessage]);
+
   async function handleToggle(schedule: ResearchSchedule) {
     if (!client) return;
     setTogglingId(schedule.id);
     try {
-      await client.updateResearchSchedule(schedule.id, {
+      const updateData: Partial<import("@/lib/hive-mind/types").CreateResearchScheduleRequest> = {
         tenantId: schedule.tenantId,
         recurrence: schedule.enabled ? "disabled" : schedule.recurrence === "disabled" ? "daily" : schedule.recurrence,
-      } as Partial<import("@/lib/hive-mind/types").CreateResearchScheduleRequest>);
+      };
+      await client.updateResearchSchedule(schedule.id, updateData);
       setSchedules((prev) =>
         prev.map((s) => (s.id === schedule.id ? { ...s, enabled: !s.enabled } : s))
       );
+      setSuccessMessage(schedule.enabled ? "Schedule disabled" : "Schedule enabled");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to toggle schedule");
     } finally {
@@ -131,6 +124,7 @@ export default function ResearchScheduleListPage() {
       await client.runResearchScheduleNow(schedule.id);
       fetchSchedules();
       fetchAlerts();
+      setSuccessMessage("Schedule triggered successfully");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run schedule");
     } finally {
@@ -140,6 +134,18 @@ export default function ResearchScheduleListPage() {
 
   const unacknowledgedAlertCount = alerts.length;
 
+  const activeCount = schedules.filter((s) => s.enabled).length;
+  const disabledCount = schedules.length - activeCount;
+
+  const filteredSchedules = schedules.filter((s) => {
+    if (statusFilter === "enabled" && !s.enabled) return false;
+    if (statusFilter === "disabled" && s.enabled) return false;
+    if (searchQuery && !s.query.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
+
+  const visibleSchedules = showAll ? filteredSchedules : filteredSchedules.slice(0, VISIBLE_COUNT);
+
   return (
     <>
       <CRMTopbar
@@ -147,14 +153,14 @@ export default function ResearchScheduleListPage() {
         subtitle={selectedTenant ? `Scheduled research in ${selectedTenant.name}` : "Automated recurring research runs"}
       />
 
-      <div className="px-6 pb-6 max-w-4xl space-y-4">
-        {/* Controls */}
+      <div className="space-y-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => { fetchSchedules(); fetchAlerts(); }}
             disabled={loading}
             className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title="Refresh"
+            aria-label="Refresh schedules"
           >
             <RefreshCw className={cn("size-3", loading && "animate-spin")} />
           </button>
@@ -173,7 +179,46 @@ export default function ResearchScheduleListPage() {
           </Link>
         </div>
 
-        {/* Loading */}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search schedules..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setShowAll(false); }}
+              className="h-8 w-56 rounded-lg border border-input bg-transparent pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value as (typeof STATUS_OPTIONS)[number]); setShowAll(false); }}
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="all">All</option>
+            <option value="enabled">Enabled</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{activeCount} active</span>
+          <span>&middot;</span>
+          <span>{disabledCount} disabled</span>
+          {alerts.length > 0 && (
+            <>
+              <span>&middot;</span>
+              <span>{alerts.length} alert{alerts.length !== 1 ? "s" : ""}</span>
+            </>
+          )}
+        </div>
+
+        {successMessage && (
+          <div className="rounded-lg bg-green-50 dark:bg-green-950/20 p-3 text-xs text-green-700 dark:text-green-400">
+            {successMessage}
+          </div>
+        )}
+
         {loading && schedules.length === 0 && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
             <Loader2 className="size-4 animate-spin" />
@@ -181,7 +226,6 @@ export default function ResearchScheduleListPage() {
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div className="rounded-[20px] bg-card p-4 shadow-card">
             <div className="flex items-start gap-2">
@@ -191,7 +235,6 @@ export default function ResearchScheduleListPage() {
           </div>
         )}
 
-        {/* No tenant */}
         {!selectedTenantId && !loading && (
           <div className="rounded-[20px] bg-card p-6 shadow-card text-center">
             <CalendarClock className="size-8 mx-auto text-muted-foreground mb-2" />
@@ -201,30 +244,32 @@ export default function ResearchScheduleListPage() {
           </div>
         )}
 
-        {/* Empty */}
-        {!loading && !error && selectedTenantId && schedules.length === 0 && (
+        {!loading && !error && selectedTenantId && filteredSchedules.length === 0 && (
           <div className="rounded-[20px] bg-card p-6 shadow-card text-center">
             <CalendarClock className="size-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
-              No research schedules yet. Create one to automate recurring research.
+              {searchQuery || statusFilter !== "all"
+                ? "No schedules match your filters."
+                : "No research schedules yet. Create one to automate recurring research."}
             </p>
-            <Link
-              href="/hive-mind/research/schedules/new"
-              className="inline-flex items-center gap-2 mt-3 h-8 px-3 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="size-3.5" />
-              Create Schedule
-            </Link>
+            {!searchQuery && statusFilter === "all" && (
+              <Link
+                href="/hive-mind/research/schedules/new"
+                className="inline-flex items-center gap-2 mt-3 h-8 px-3 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="size-3.5" />
+                Create Schedule
+              </Link>
+            )}
           </div>
         )}
 
-        {/* Schedule list */}
-        {schedules.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {schedules.map((schedule) => (
+        {visibleSchedules.length > 0 && (
+          <div className="flex flex-col gap-2" aria-live="polite" aria-atomic="true">
+            {visibleSchedules.map((schedule) => (
               <div
                 key={schedule.id}
-                className="rounded-xl bg-card p-4 shadow-card hover:bg-muted/50 transition-colors"
+                className="rounded-[20px] bg-card p-5 shadow-card hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center justify-between mb-2">
                   <Link
@@ -242,18 +287,18 @@ export default function ResearchScheduleListPage() {
                         {schedule.query}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {recurrenceLabels[schedule.recurrence] ?? schedule.recurrence}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           &middot; {schedule.sourceMode}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           &middot; {schedule.timezone}
                         </span>
                         <span
                           className={cn(
-                            "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+                            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
                             schedule.enabled
                               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                               : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
@@ -266,15 +311,13 @@ export default function ResearchScheduleListPage() {
                   </Link>
 
                   <div className="flex items-center gap-2 shrink-0 ml-3">
-                    {/* Next run countdown */}
                     {schedule.enabled && schedule.nextRunAt && (
-                      <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Clock className="size-3" />
                         {formatNextRun(schedule.nextRunAt)}
                       </div>
                     )}
 
-                    {/* Run now */}
                     <button
                       onClick={() => handleRunNow(schedule)}
                       disabled={runningId === schedule.id || !schedule.enabled}
@@ -284,6 +327,7 @@ export default function ResearchScheduleListPage() {
                         "disabled:opacity-50 disabled:pointer-events-none"
                       )}
                       title="Run now"
+                      aria-label="Run now"
                     >
                       {runningId === schedule.id ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -292,7 +336,6 @@ export default function ResearchScheduleListPage() {
                       )}
                     </button>
 
-                    {/* Toggle enable/disable */}
                     <button
                       onClick={() => handleToggle(schedule)}
                       disabled={togglingId === schedule.id}
@@ -300,7 +343,7 @@ export default function ResearchScheduleListPage() {
                         "flex size-7 items-center justify-center rounded-lg transition-colors",
                         "disabled:opacity-50 disabled:pointer-events-none"
                       )}
-                      title={schedule.enabled ? "Disable" : "Enable"}
+                      aria-label={schedule.enabled ? "Disable schedule" : "Enable schedule"}
                     >
                       {togglingId === schedule.id ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -311,18 +354,17 @@ export default function ResearchScheduleListPage() {
                       )}
                     </button>
 
-                    {/* Link to detail */}
                     <Link
                       href={`/hive-mind/research/schedules/${schedule.id}`}
                       className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      aria-label={schedule.query}
                     >
                       <ArrowRight className="size-4" />
                     </Link>
                   </div>
                 </div>
 
-                {/* Last run info */}
-                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   {schedule.lastRunAt && (
                     <span>
                       Last run: {new Date(schedule.lastRunAt).toLocaleDateString()}{" "}
@@ -338,13 +380,29 @@ export default function ResearchScheduleListPage() {
                   {schedule.maxSources && (
                     <span>Max sources: {schedule.maxSources}</span>
                   )}
+                  {schedule.createdBy && (
+                    <span>Created by: {schedule.createdBy}</span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Unacknowledged alerts */}
+        {filteredSchedules.length > VISIBLE_COUNT && (
+          <div className="flex justify-center pt-1">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showAll
+                ? `Show less (${VISIBLE_COUNT})`
+                : `Show more (${filteredSchedules.length - VISIBLE_COUNT} remaining)`
+              }
+            </button>
+          </div>
+        )}
+
         {!loading && alerts.length > 0 && (
           <div className="rounded-[20px] bg-card p-6 shadow-card">
             <h3 className="font-poppins font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -371,7 +429,7 @@ export default function ResearchScheduleListPage() {
                     </div>
                     <span
                       className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize shrink-0 ml-2",
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize shrink-0 ml-2",
                         alert.severity === "critical" && "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
                         alert.severity === "warning" && "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
                         alert.severity === "info" && "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"

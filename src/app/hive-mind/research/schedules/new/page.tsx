@@ -1,34 +1,28 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { CRMTopbar } from "@/components/crm/crm-topbar";
 import { useHiveMind } from "@/lib/hive-mind/hive-mind-context";
 import { HiveMindApiError, HiveMindNetworkError } from "@/lib/hive-mind/errors";
 import type { ResearchScheduleRecurrence, ResearchSourceMode } from "@/lib/hive-mind/types";
+import { recurrenceLabels, RESEARCH_SCHEDULE_RECURRENCES } from "@/lib/hive-mind/status-config";
+import { SourceModeSelector } from "@/components/hive-mind/source-mode-selector";
 import {
   ArrowLeft,
   Loader2,
   CheckCircle,
   XCircle,
+  X,
   CalendarClock,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const TIMEZONES = [
-  "UTC",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "Europe/London",
-  "Europe/Berlin",
-  "Europe/Paris",
-  "Asia/Tokyo",
-  "Asia/Shanghai",
-  "Asia/Kolkata",
-  "Australia/Sydney",
-];
+const TIMEZONES = typeof Intl !== "undefined" && Intl.supportedValuesOf
+  ? Intl.supportedValuesOf("timeZone")
+  : ["UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Berlin", "Europe/Paris", "Asia/Tokyo", "Asia/Shanghai", "Asia/Kolkata", "Australia/Sydney"];
 
 export default function NewResearchSchedulePage() {
   const { client, selectedTenantId, selectedProjectId, tenants, projects } = useHiveMind();
@@ -37,11 +31,13 @@ export default function NewResearchSchedulePage() {
   const [sourceMode, setSourceMode] = useState<ResearchSourceMode>("auto");
   const [maxSources, setMaxSources] = useState(10);
   const [recurrence, setRecurrence] = useState<ResearchScheduleRecurrence>("daily");
+  const [runTime, setRunTime] = useState("08:00");
   const [timezone, setTimezone] = useState("UTC");
   const [tenantOverride, setTenantOverride] = useState(selectedTenantId ?? "");
   const [projectOverride, setProjectOverride] = useState(selectedProjectId ?? "");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ status: "success" | "error"; message: string; scheduleId?: string } | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const handleError = useCallback((err: unknown) => {
     if (err instanceof HiveMindApiError) {
@@ -52,6 +48,13 @@ export default function NewResearchSchedulePage() {
       setResult({ status: "error", message: err instanceof Error ? err.message : "Failed to create schedule" });
     }
   }, []);
+
+  useEffect(() => {
+    if (result?.status === "success") {
+      const timer = setTimeout(() => setResult(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [result]);
 
   const canSubmit = !!query.trim() && !!tenantOverride && !loading;
 
@@ -68,6 +71,7 @@ export default function NewResearchSchedulePage() {
         maxSources,
         recurrence,
         timezone,
+        runTime,
         tenantId: tenantOverride,
         projectId: projectOverride || undefined,
       });
@@ -86,7 +90,7 @@ export default function NewResearchSchedulePage() {
         subtitle="Create an automated recurring research run"
       />
 
-      <div className="px-6 pb-6 max-w-2xl space-y-4">
+      <div>
         <Link
           href="/hive-mind/research/schedules"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -95,9 +99,9 @@ export default function NewResearchSchedulePage() {
           Back to Schedules
         </Link>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           {/* Query */}
-          <div className="rounded-[20px] bg-card p-6 shadow-card">
+          <div className="rounded-[20px] bg-card p-5 shadow-card">
             <h3 className="font-poppins font-semibold text-foreground mb-1">
               Research Query
             </h3>
@@ -116,7 +120,7 @@ export default function NewResearchSchedulePage() {
                 required
                 rows={3}
                 className={cn(
-                  "w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm transition-colors outline-none resize-none",
+                  "w-full rounded-[12px] bg-muted border border-input px-3 py-2 text-sm transition-colors outline-none resize-none",
                   "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 )}
               />
@@ -124,7 +128,7 @@ export default function NewResearchSchedulePage() {
           </div>
 
           {/* Schedule Configuration */}
-          <div className="rounded-[20px] bg-card p-6 shadow-card">
+          <div className="rounded-[20px] bg-card p-5 shadow-card">
             <h3 className="font-poppins font-semibold text-foreground mb-1">
               Schedule Configuration
             </h3>
@@ -138,7 +142,7 @@ export default function NewResearchSchedulePage() {
                   Recurrence
                 </label>
                 <div className="flex gap-1 rounded-xl bg-muted p-1">
-                  {(["daily", "weekly", "monthly", "disabled"] as const).map((r) => (
+                  {RESEARCH_SCHEDULE_RECURRENCES.map((r) => (
                     <button
                       key={r}
                       type="button"
@@ -150,10 +154,26 @@ export default function NewResearchSchedulePage() {
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      {r === "disabled" ? "Off" : r}
+                      {recurrenceLabels[r]}
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="run-time" className="text-xs font-medium text-foreground mb-1 block">
+                  Run Time
+                </label>
+                <input
+                  id="run-time"
+                  type="time"
+                  value={runTime}
+                  onChange={(e) => setRunTime(e.target.value)}
+                  className={cn(
+                    "h-10 w-40 rounded-[12px] bg-muted border border-input px-3 text-sm transition-colors outline-none",
+                    "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground"
+                  )}
+                />
               </div>
 
               <div>
@@ -165,7 +185,7 @@ export default function NewResearchSchedulePage() {
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
                   className={cn(
-                    "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm outline-none",
+                    "h-10 w-full rounded-[12px] bg-muted border border-input px-3 text-sm outline-none",
                     "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground"
                   )}
                 >
@@ -177,8 +197,8 @@ export default function NewResearchSchedulePage() {
             </div>
           </div>
 
-          {/* Source Mode */}
-          <div className="rounded-[20px] bg-card p-6 shadow-card">
+          {/* Source Configuration */}
+          <div className="rounded-[20px] bg-card p-5 shadow-card">
             <h3 className="font-poppins font-semibold text-foreground mb-1">
               Source Configuration
             </h3>
@@ -187,33 +207,7 @@ export default function NewResearchSchedulePage() {
             </p>
 
             <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-foreground mb-1 block">
-                  Source Mode
-                </label>
-                <div className="flex gap-1 rounded-xl bg-muted p-1">
-                  {(["auto", "manual", "hybrid"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setSourceMode(mode)}
-                      className={cn(
-                        "flex-1 inline-flex items-center justify-center gap-2 h-8 rounded-lg text-xs font-medium capitalize transition-colors",
-                        sourceMode === mode
-                          ? "bg-card text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  {sourceMode === "auto" && "Automatically discover and crawl relevant sources."}
-                  {sourceMode === "manual" && "Use only manually provided URLs."}
-                  {sourceMode === "hybrid" && "Combine auto-discovered sources with manual URLs."}
-                </p>
-              </div>
+              <SourceModeSelector value={sourceMode} onChange={setSourceMode} />
 
               <div>
                 <label htmlFor="max-sources" className="text-xs font-medium text-foreground mb-1 block">
@@ -227,7 +221,7 @@ export default function NewResearchSchedulePage() {
                   value={maxSources}
                   onChange={(e) => setMaxSources(parseInt(e.target.value, 10) || 1)}
                   className={cn(
-                    "h-10 w-24 rounded-xl border border-input bg-transparent px-3 text-sm transition-colors outline-none",
+                    "h-10 w-24 rounded-[12px] bg-muted border border-input px-3 text-sm transition-colors outline-none",
                     "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   )}
                 />
@@ -235,54 +229,70 @@ export default function NewResearchSchedulePage() {
             </div>
           </div>
 
-          {/* Tenant/Project Override */}
-          <div className="rounded-[20px] bg-card p-6 shadow-card">
-            <h3 className="font-poppins font-semibold text-foreground mb-1">
-              Scope
-            </h3>
-            <p className="text-xs text-muted-foreground mb-4">
-              Select the organization and project context for this schedule.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="tenant-select" className="text-xs font-medium text-foreground mb-1 block">
-                  Organization
-                </label>
-                <select
-                  id="tenant-select"
-                  value={tenantOverride}
-                  onChange={(e) => setTenantOverride(e.target.value)}
-                  className={cn(
-                    "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm outline-none",
-                    "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground"
-                  )}
-                  required
-                >
-                  {tenants.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
+          {/* Advanced Settings */}
+          <div className="rounded-[20px] bg-card p-5 shadow-card">
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen(!advancedOpen)}
+              className="flex items-center gap-2 w-full text-left"
+            >
+              {advancedOpen ? (
+                <ChevronDown className="size-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="size-4 text-muted-foreground" />
+              )}
+              <h3 className="font-poppins font-semibold text-foreground">
+                Advanced Settings
+              </h3>
+            </button>
+
+            {advancedOpen && (
+              <div className="mt-4">
+                <p className="text-xs text-muted-foreground mb-4">
+                  Select the organization and project context for this schedule.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="tenant-select" className="text-xs font-medium text-foreground mb-1 block">
+                      Organization
+                    </label>
+                    <select
+                      id="tenant-select"
+                      value={tenantOverride}
+                      onChange={(e) => setTenantOverride(e.target.value)}
+                      className={cn(
+                        "h-10 w-full rounded-[12px] bg-muted border border-input px-3 text-sm outline-none",
+                        "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground"
+                      )}
+                      required
+                    >
+                      {tenants.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="project-select" className="text-xs font-medium text-foreground mb-1 block">
+                      Project <span className="text-muted-foreground">(optional)</span>
+                    </label>
+                    <select
+                      id="project-select"
+                      value={projectOverride}
+                      onChange={(e) => setProjectOverride(e.target.value)}
+                      className={cn(
+                        "h-10 w-full rounded-[12px] bg-muted border border-input px-3 text-sm outline-none",
+                        "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground"
+                      )}
+                    >
+                      <option value="">All projects</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label htmlFor="project-select" className="text-xs font-medium text-foreground mb-1 block">
-                  Project <span className="text-muted-foreground">(optional)</span>
-                </label>
-                <select
-                  id="project-select"
-                  value={projectOverride}
-                  onChange={(e) => setProjectOverride(e.target.value)}
-                  className={cn(
-                    "h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm outline-none",
-                    "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground"
-                  )}
-                >
-                  <option value="">All projects</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Submit */}
@@ -291,7 +301,7 @@ export default function NewResearchSchedulePage() {
               type="submit"
               disabled={!canSubmit}
               className={cn(
-                "inline-flex items-center gap-2 h-9 px-4 rounded-xl text-sm font-medium transition-colors",
+                "inline-flex items-center gap-2 rounded-[12px] px-4 py-2 text-sm font-medium transition-colors",
                 "bg-primary text-primary-foreground hover:bg-primary/90",
                 "disabled:opacity-50 disabled:pointer-events-none"
               )}
@@ -315,7 +325,7 @@ export default function NewResearchSchedulePage() {
         {result && (
           <div
             className={cn(
-              "rounded-[20px] p-4",
+              "rounded-[20px] p-4 mt-4 bg-card shadow-card",
               result.status === "success"
                 ? "bg-green-50 dark:bg-green-950/20"
                 : "bg-red-50 dark:bg-red-950/20"
@@ -327,7 +337,7 @@ export default function NewResearchSchedulePage() {
               ) : (
                 <XCircle className="size-5 shrink-0 text-destructive mt-0.5" />
               )}
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">{result.message}</p>
                 {result.scheduleId && (
                   <p className="text-xs text-muted-foreground mt-1">
@@ -341,14 +351,30 @@ export default function NewResearchSchedulePage() {
                   </p>
                 )}
                 {result.status === "success" && (
-                  <Link
-                    href="/hive-mind/research/schedules"
-                    className="inline-flex items-center gap-1 mt-2 text-sm font-medium text-primary hover:underline"
-                  >
-                    View all schedules
-                  </Link>
+                  <div className="flex items-center gap-3 mt-2">
+                    <Link
+                      href={`/hive-mind/research/schedules/${result.scheduleId}`}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      View schedule detail
+                    </Link>
+                    <Link
+                      href="/hive-mind/research/schedules"
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      View all schedules
+                    </Link>
+                  </div>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={() => setResult(null)}
+                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="size-4" />
+              </button>
             </div>
           </div>
         )}

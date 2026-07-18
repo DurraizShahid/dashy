@@ -713,6 +713,7 @@ export interface CreateResearchScheduleRequest {
   maxSources?: number;
   recurrence?: ResearchScheduleRecurrence;
   timezone?: string;
+  runTime?: string;
   tenantId: string;
   projectId?: string;
 }
